@@ -69,7 +69,7 @@
 </main>
 
 <script th:if="${checkout.payPalDisponible}"
-        th:src="|https://www.paypal.com/sdk/js?client-id=${checkout.payPalClientId}&currency=${checkout.payPalMoneda}&intent=capture&components=buttons|"></script>
+        th:src="@{https://www.paypal.com/sdk/js('client-id'=${checkout.payPalClientId},currency=${checkout.payPalMoneda},intent='capture',components='buttons')}"></script>
 <script th:if="${checkout.payPalDisponible}" th:inline="javascript">
 (function () {
     const pagoId = /*[[${checkout.pago.id}]]*/ 0;

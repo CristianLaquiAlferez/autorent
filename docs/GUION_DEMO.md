@@ -3,7 +3,7 @@
 ## Antes de empezar (10 minutos antes)
 
 1. Encender **MySQL** en XAMPP.
-2. En NetBeans: **Clean and Build** (deben salir 95 pruebas, 0 fallos) y luego **Run**.
+2. En NetBeans: **Clean and Build** (deben salir 96 pruebas, 0 fallos) y luego **Run**.
 3. Abrir `http://localhost:8080` y comprobar que entra con `admin` / `Admin123*`.
 4. Tener abiertos en NetBeans estos archivos, en este orden:
    `ReglasAlquiler`, `ReservaUseCase`, `ReservaService`, `JpaReservaAdapter`, `SecurityConfig`.
@@ -50,7 +50,7 @@ Si algo falla en vivo, decirlo con calma y pasar al siguiente paso.
    `registradoPor` y `procesadoPor`.
 7. **Pagos y boletas.** Mostrar `PasarelaTarjetaPort` y `FacturacionElectronicaPort`: dos adaptadores cada uno
    (prueba y real). Cambiar de proveedor no toca los servicios.
-8. **Pruebas.** Mostrar la salida de Clean and Build: **95 pruebas, 0 fallos**.
+8. **Pruebas.** Mostrar la salida de Clean and Build: **96 pruebas, 0 fallos**.
 
 ## 4. Cierre (30 s)
 

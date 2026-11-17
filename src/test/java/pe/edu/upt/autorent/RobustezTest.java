@@ -3,7 +3,9 @@ package pe.edu.upt.autorent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -32,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Simulación aleatoria de cientos de operaciones y verificación de que los datos siguen siendo coherentes.
  */
 @SpringBootTest
+@AutoConfigureMockMvc
 @Import({FlujosDeNegocioTest.ConfiguracionDePrueba.class, RobustezTest.ConfiguracionPayPal.class})
 @TestPropertySource(properties = "spring.datasource.url=jdbc:h2:mem:autorent_robustez;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
 class RobustezTest {
@@ -87,6 +90,7 @@ class RobustezTest {
     @Autowired private ReservaRepositoryPort reservasRepo;
     @Autowired private DevolucionRepositoryPort devoluciones;
     @Autowired private ComprobanteRepositoryPort comprobantesRepo;
+    @Autowired private MockMvc mvc;
 
     @BeforeEach void preparar() { reloj.reiniciar(); payPal.modo = PayPalFalso.Modo.APROBAR; }
 
@@ -139,6 +143,26 @@ class RobustezTest {
         assertEquals(EstadoDevolucion.COMPLETADA, d.estado());
         assertEquals("REF-CAP-" + orden.id(), d.codigoOperacion());
         assertTrue(comprobantesRepo.findByReservaId(r.id()).stream().anyMatch(x -> x.tipo() == TipoComprobante.NOTA_CREDITO));
+    }
+
+    /**
+     * La dirección del script de PayPal debe llegar intacta al navegador. Antes, "&currency" sin escapar
+     * se leía en HTML como el carácter ¤ y PayPal rechazaba el client-id (solo se notaba con PayPal real).
+     */
+    @Test
+    void laPantallaDePagoCargaElScriptDePayPalConLaDireccionCorrecta() throws Exception {
+        Usuario c = cliente(); Auto a = auto("50.00");
+        Reserva r = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(5), hoy().plusDays(6),
+                new BigDecimal("50.00"), MetodoPago.TARJETA, null, null, null);
+        Pago p = reservas.buscarPagoEnLineaPendiente(c.username(), r.id()).orElseThrow();
+        String html = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/pagos/" + p.id() + "/pagar")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(c.username()).roles("CLIENTE")))
+                .andReturn().getResponse().getContentAsString();
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("src=\"(https://www\\.paypal\\.com/sdk/js[^\"]*)\"").matcher(html);
+        assertTrue(m.find(), "Debe estar el script de PayPal");
+        String src = org.springframework.web.util.HtmlUtils.htmlUnescape(m.group(1));   // lo que interpreta el navegador
+        assertTrue(src.contains("client-id=falso&currency=USD"), "Dirección mal formada: " + src);
+        assertFalse(src.contains("¤"));
     }
 
     @Test
