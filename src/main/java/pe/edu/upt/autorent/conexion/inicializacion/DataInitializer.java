@@ -23,7 +23,10 @@ public class DataInitializer {
                                             PasswordEncoderPort encoder,
                                             @Value("${autorent.demo.clave-admin:Admin123*}") String claveAdmin,
                                             @Value("${autorent.demo.clave-trabajador:Trabajador123*}") String claveTrabajador,
-                                            @Value("${autorent.demo.clave-cliente:Cliente123*}") String claveCliente) {
+                                            @Value("${autorent.demo.clave-cliente:Cliente123*}") String claveCliente,
+                                            @Value("${autorent.demo.clave-docente:}") String claveDocente,
+                                            @Value("${autorent.demo.clave-curso-trabajador:}") String claveCursoTrabajador,
+                                            @Value("${autorent.demo.clave-curso-cliente:}") String claveCursoCliente) {
         return args -> {
             crearUsuarioSiNoExiste(usuarios, encoder, "admin", claveAdmin, "Administrador", "AutoRent",
                     "70000001", "admin@autorent.demo", "999111111", "Sucursal principal", Rol.ADMIN);
@@ -31,6 +34,21 @@ public class DataInitializer {
                     "70000002", "trabajador@autorent.demo", "999222222", "Sucursal principal", Rol.TRABAJADOR);
             crearUsuarioSiNoExiste(usuarios, encoder, "cliente", claveCliente, "María", "Cliente Demo",
                     "70000003", "cliente@autorent.demo", "999333333", "Tacna", Rol.CLIENTE);
+
+            // Cuentas para la presentación: solo se crean si su contraseña está definida en una variable de entorno
+            // (CLAVE_DOCENTE, CLAVE_CURSO_TRABAJADOR, CLAVE_CURSO_CLIENTE). No hay contraseña por defecto en el código.
+            if (!claveDocente.isBlank()) {
+                crearUsuarioSiNoExiste(usuarios, encoder, "docente", claveDocente, "Docente", "Programación III",
+                        "70000004", "docente@autorent.demo", "999444444", "Universidad Privada de Tacna", Rol.ADMIN);
+            }
+            if (!claveCursoTrabajador.isBlank()) {
+                crearUsuarioSiNoExiste(usuarios, encoder, "curso.trabajador", claveCursoTrabajador, "Asesor", "Curso",
+                        "70000005", "curso.trabajador@autorent.demo", "999555555", "Sucursal principal", Rol.TRABAJADOR);
+            }
+            if (!claveCursoCliente.isBlank()) {
+                crearUsuarioSiNoExiste(usuarios, encoder, "curso.cliente", claveCursoCliente, "Cliente", "Curso",
+                        "70000006", "curso.cliente@autorent.demo", "999666666", "Tacna", Rol.CLIENTE);
+            }
 
             if (!autos.existsAny()) {
                 autos.save(new Auto(null, "V1A-101", "Toyota", "Corolla", 2023, "Sedán", "Plata", new BigDecimal("150.00"), "Sedán cómodo para ciudad y carretera.", EstadoAuto.DISPONIBLE));
