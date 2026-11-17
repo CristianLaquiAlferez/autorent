@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<!-- Clientes: solicitud de alquiler y anticipo. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nueva reserva | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+<script th:src="@{/js/telefono-peru.js}" defer>
+</script>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container narrow">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<section class="panel">
+        <p class="eyebrow">SOLICITUD DE ALQUILER</p>
+<h1 th:text="|${auto.marca} ${auto.modelo}|">Vehículo</h1>
+        <p class="muted" th:text="|${auto.placa} · S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)} por día|">Placa y tarifa</p>
+        <img th:if="${auto.imagenUrl != null}" th:src="${auto.imagenUrl}" class="reserva-foto" alt="Foto del vehículo" onerror="this.style.display='none'">
+        <form th:action="@{/reservas/crear}" th:object="${form}" method="post" class="form-grid" id="reservaForm" th:data-tarifa="${auto.tarifaDiaria}">
+            <input type="hidden" th:field="*{autoId}">
+            <label>Fecha de recojo *<input th:field="*{fechaInicio}" type="date" th:attr="min=${fechaMinima},max=${fechaMaxima}" required>
+</label>
+            <label>Fecha de devolución *<input th:field="*{fechaFin}" type="date" required>
+<small th:text="|Máximo ${maximoDias} días de alquiler.|">Máximo 30 días.</small>
+</label>
+            <div class="full notice" id="calculoAlquiler">Seleccione las fechas para calcular el total y el anticipo mínimo.</div>
+            <label>Anticipo (S/) *<input th:field="*{montoAnticipo}" type="number" min="0.01" step="0.01" required>
+<small>Mínimo 20% del total.</small>
+</label>
+            <label>Método de pago *<select th:field="*{metodoPago}" required>
+<option value="">Seleccione</option>
+<option th:each="m : ${metodos}" th:value="${m}" th:text="${m.etiqueta}">
+</option>
+</select>
+</label>
+            <div class="notice full solo-en-linea" hidden>
+<strong>Pago en línea:</strong> al enviar la solicitud pasará a la pantalla de pago (tarjeta Visa/Mastercard o PayPal).
+La reserva se confirma en cuanto el pago sea aprobado y recibirá su boleta electrónica. Si no paga en 30 minutos, el pago se anula.
+</div>
+            <div class="notice full solo-yape">
+<strong>Yape receptor:</strong>
+<span th:text="${titularYape}">AutoRent</span> · <strong th:text="${yapeNegocio}">999000000</strong>
+<span th:if="${yapeNegocio == '999000000'}"> · Número de prueba; no realizar pagos.</span>
+</div>
+            <label class="solo-yape">Número de Yape<input th:field="*{telefonoYape}" placeholder="999999999" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
+<small>Obligatorio si selecciona Yape.</small>
+</label>
+            <label class="solo-yape">Código de operación<input th:field="*{codigoOperacion}" maxlength="40" placeholder="Ej. 123456">
+</label>
+            <label class="full solo-efectivo">Número para devolución en caso de pago en efectivo<input th:field="*{telefonoDevolucion}" placeholder="999999999" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
+</label>
+            
+            <div class="full actions">
+<button class="btn primary" type="submit">Solicitar reserva</button>
+<a class="btn outline" th:href="@{/autos}">Cancelar</a>
+</div>
+        </form>
+    </section>
+</main>
+<script>
+(function(){
+ const form=document.getElementById('reservaForm');
+ const inicio=document.getElementById('fechaInicio');
+ const fin=document.getElementById('fechaFin');
+ const salida=document.getElementById('calculoAlquiler');
+ if(!form||!inicio||!fin||!salida)return;
+ const tarifa=Number(form.dataset.tarifa||0);
+ function calcular(){
+   if(!inicio.value||!fin.value){salida.textContent='Seleccione las fechas para calcular el total y el anticipo mínimo.';return;}
+   const a=new Date(inicio.value+'T00:00:00'); const b=new Date(fin.value+'T00:00:00');
+   const dias=Math.round((b-a)/86400000);
+   if(dias<=0){salida.textContent='La devolución debe ser posterior al recojo.';return;}
+   const total=dias*tarifa; const minimo=total*0.20;
+   salida.textContent='Duración: '+dias+' día(s). Total estimado: S/ '+total.toFixed(2)+'. Anticipo mínimo (20%): S/ '+minimo.toFixed(2)+'.';
+ }
+ inicio.addEventListener('change',calcular); fin.addEventListener('change',calcular); calcular();
+ // Muestra solo los campos que corresponden al método elegido.
+ const metodo=document.getElementById('metodoPago');
+ function mostrarCampos(){
+   const m=metodo?metodo.value:'';
+   const enLinea=(m==='TARJETA'||m==='PAYPAL');
+   document.querySelectorAll('.solo-yape').forEach(e=>e.hidden=(m!=='YAPE'));
+   document.querySelectorAll('.solo-efectivo').forEach(e=>e.hidden=(m!=='EFECTIVO'));
+   document.querySelectorAll('.solo-en-linea').forEach(e=>e.hidden=!enLinea);
+ }
+ if(metodo){metodo.addEventListener('change',mostrarCampos); mostrarCampos();}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<!-- Administración: lista y gestión de usuarios por rol. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usuarios | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+<script th:src="@{/js/telefono-peru.js}" defer>
+</script>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">ADMINISTRACIÓN</p>
+<h1>Usuarios del sistema</h1>
+</div>
+</div>
+    <section class="panel">
+<h2>Registrar trabajador</h2>
+<form th:action="@{/admin/usuarios/trabajador}" th:object="${form}" method="post" class="form-grid">
+        <label>Usuario *<input th:field="*{username}" required minlength="4">
+</label>
+<label>Contraseña *<input th:field="*{password}" type="password" required minlength="8">
+</label>
+        <label>Nombres *<input th:field="*{nombres}" required>
+</label>
+<label>Apellidos *<input th:field="*{apellidos}" required>
+</label>
+        <label>DNI *<input th:field="*{documento}" required pattern="[0-9]{8}" maxlength="8">
+</label>
+<label>Correo *<input th:field="*{correo}" type="email" required>
+</label>
+        <label>Teléfono<input th:field="*{telefono}" type="tel" inputmode="numeric" maxlength="9" minlength="6" pattern="[0-9]{6,9}" data-telefono-peru="contacto" title="Ingrese de 6 a 9 dígitos (sin +51)">
+</label>
+<label>Dirección<input th:field="*{direccion}">
+</label>
+        <div class="full">
+<button class="btn primary" type="submit">Registrar trabajador</button>
+</div>
+    </form>
+</section>
+    <section class="panel">
+<h2>Usuarios registrados</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Usuario</th>
+<th>Nombre</th>
+<th>Documento</th>
+<th>Rol</th>
+<th>Correo</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="u : ${usuarios}">
+<td th:text="${u.username}">
+</td>
+<td th:text="|${u.nombres} ${u.apellidos}|">
+</td>
+<td th:text="${u.documento}">
+</td>
+<td th:text="${u.rol}">
+</td>
+<td th:text="${u.correo}">
+</td>
+<td th:text="${u.activo ? 'ACTIVO' : 'INACTIVO'}">
+</td>
+<td>
+            <form th:if="${u.rol.name() != 'ADMIN' or u.activo}" th:action="@{/admin/usuarios/{id}/estado(id=${u.id})}" method="post" class="inline-form">
+<input type="hidden" name="activo" th:value="${!u.activo}">
+<button class="btn small secondary" type="submit" th:text="${u.activo ? 'Desactivar' : 'Activar'}">
+</button>
+</form>
+        </td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+</main>
+</body>
+</html>

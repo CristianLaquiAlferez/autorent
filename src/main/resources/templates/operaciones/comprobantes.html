@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<!-- Personal: boletas y notas de crédito electrónicas emitidas. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Comprobantes | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">FACTURACIÓN ELECTRÓNICA</p>
+<h1>Comprobantes emitidos</h1>
+</div>
+</div>
+    <p class="muted">Cada pago confirmado genera una boleta; cada devolución, una nota de crédito que la anula.
+        Si un envío falló (por ejemplo, sin internet), use "Reintentar": conserva el mismo número.</p>
+    <section class="panel">
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Tipo</th>
+<th>Número</th>
+<th>Fecha</th>
+<th>Cliente</th>
+<th>Reserva / pago</th>
+<th>Gravada</th>
+<th>IGV</th>
+<th>Total</th>
+<th>Estado</th>
+<th>Emisión</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="c : ${comprobantes}">
+<td th:text="${c.tipo.name() == 'BOLETA' ? 'Boleta' : 'Nota de crédito'}">
+</td>
+<td th:text="${c.serieNumero()}">
+</td>
+<td th:text="${#temporals.format(c.fechaEmision,'dd/MM/yyyy')}">
+</td>
+<td th:text="|${c.clienteNombre} (DNI ${c.clienteDocumento})|">
+</td>
+<td th:text="|${c.reservaId} / ${c.pagoId}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(c.gravada,1,2)}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(c.igv,1,2)}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(c.total,1,2)}|">
+</td>
+<td>
+<span class="status" th:classappend="${c.emitido() ? 'green' : (c.estado.name() == 'ERROR' ? 'orange' : 'gray')}" th:text="${c.estado}">
+</span>
+<small class="muted bloque" th:if="${c.mensaje != null}" th:text="${c.mensaje}">Mensaje</small>
+</td>
+<td th:text="${c.proveedor == 'PRUEBA' ? 'Modo de prueba' : c.proveedor}">
+</td>
+<td>
+<a class="btn small outline" th:if="${c.emitido()}" th:href="@{/comprobantes/{id}/pdf(id=${c.id})}" target="_blank">PDF</a>
+<form th:unless="${c.emitido()}" th:action="@{/operaciones/comprobantes/{id}/reintentar(id=${c.id})}" method="post">
+<button class="btn small primary" type="submit">Reintentar</button>
+</form>
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(comprobantes)}">
+<td colspan="11" class="center muted">Todavía no hay comprobantes.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+</main>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!-- Recepción: formulario de cliente presencial. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registrar cliente | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+<script th:src="@{/js/telefono-peru.js}" defer>
+</script>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container narrow">
+<div th:replace="~{fragments/alerts :: alerts}">
+</div>
+    <section class="panel">
+<h1>Registrar cliente en sucursal</h1>
+        <form th:action="@{/operaciones/clientes/crear}" th:object="${form}" method="post" class="form-grid">
+            <label>Usuario *<input th:field="*{username}" required minlength="4">
+</label>
+<label>Contraseña temporal *<input th:field="*{password}" type="password" required minlength="8">
+</label>
+            <label>Nombres *<input th:field="*{nombres}" required>
+</label>
+<label>Apellidos *<input th:field="*{apellidos}" required>
+</label>
+            <label>DNI *<input th:field="*{documento}" required pattern="[0-9]{8}" maxlength="8">
+</label>
+<label>Correo *<input th:field="*{correo}" type="email" required>
+</label>
+            <label>Teléfono<input th:field="*{telefono}" type="tel" inputmode="numeric" maxlength="9" minlength="6" pattern="[0-9]{6,9}" data-telefono-peru="contacto" title="Ingrese de 6 a 9 dígitos (sin +51)">
+</label>
+<label>Dirección<input th:field="*{direccion}">
+</label>
+            <div class="full actions">
+<button class="btn primary" type="submit">Guardar cliente</button>
+<a class="btn outline" th:href="@{/operaciones/reservas/nueva}">Volver</a>
+</div>
+        </form>
+    </section>
+</main>
+</body>
+</html>

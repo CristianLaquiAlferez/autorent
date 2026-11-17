@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!-- Clientes: historial y estado de sus reservas. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mis reservas | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+<script th:src="@{/js/telefono-peru.js}" defer>
+</script>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">CLIENTE</p>
+<h1>Mis reservas</h1>
+</div>
+<a class="btn primary" th:href="@{/autos}">Nueva reserva</a>
+</div>
+    <div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>N.°</th>
+<th>Vehículo</th>
+<th>Periodo</th>
+<th>Total</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="r : ${reservas}">
+<td><a th:href="@{/mis-reservas/{id}(id=${r.id})}" th:text="${r.id}">1</a>
+</td>
+<td th:text="|${r.auto.marca} ${r.auto.modelo}|">
+</td>
+<td th:text="|${r.fechaInicio} al ${r.fechaFin}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(r.total,1,2)}|">
+</td>
+<td>
+<span class="status" th:text="${r.estado}">
+</span>
+<small class="muted bloque" th:if="${r.observacion != null}" th:text="${r.observacion}">Nota</small>
+<small class="muted bloque" th:if="${(r.estado.name() == 'CONFIRMADA' or r.estado.name() == 'FINALIZADA') and saldos[r.id].signum() > 0}"
+       th:text="|Saldo pendiente: S/ ${#numbers.formatDecimal(saldos[r.id],1,2)}|">Saldo</small>
+</td>
+<td>
+            <a class="btn small secondary" th:href="@{/mis-reservas/{id}(id=${r.id})}">Ver detalle e historial</a>
+            <a class="btn small primary" th:if="${pagosEnCurso.containsKey(r.id)}" th:href="@{/pagos/{id}/pagar(id=${pagosEnCurso[r.id]})}">Pagar ahora</a>
+            <form th:if="${(r.estado.name() == 'CONFIRMADA' or r.estado.name() == 'FINALIZADA') and saldos[r.id].signum() > 0 and !hayPendiente.contains(r.id)}"
+                  th:action="@{/reservas/{id}/pagar-saldo(id=${r.id})}" method="post">
+<button class="btn small secondary" type="submit">Pagar saldo en línea</button>
+</form>
+            <form th:if="${cancelables.contains(r.id)}" th:action="@{/reservas/{id}/cancelar(id=${r.id})}" method="post" onsubmit="return confirm('¿Desea cancelar esta reserva? Se aplicará la regla de 24 horas.');">
+<button class="btn small danger-btn" type="submit">Cancelar</button>
+</form>
+            <span class="muted" th:if="${(r.estado.name() == 'PENDIENTE_PAGO' or r.estado.name() == 'PENDIENTE_VALIDACION' or r.estado.name() == 'CONFIRMADA') and !cancelables.contains(r.id)}">Plazo de cancelación vencido.</span>
+            <form th:if="${reintentables.contains(r.id)}" th:action="@{/reservas/{id}/reintentar(id=${r.id})}" method="post" class="mini-form">
+                <strong>Reintentar anticipo rechazado</strong>
+                <input name="montoAnticipo" type="number" min="0.01" step="0.01" placeholder="Monto S/ (mínimo 20%)" required>
+                <select name="metodoPago" required>
+<option th:each="m : ${metodos}" th:value="${m}" th:text="${m.etiqueta}">Método</option>
+</select>
+                <input name="telefonoYape" placeholder="Número Yape (si aplica)" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
+                <input name="codigoOperacion" placeholder="Nuevo código Yape" maxlength="40">
+                <input name="telefonoDevolucion" placeholder="Número devolución efectivo" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
+                <button class="btn small primary" type="submit">Reintentar pago</button>
+            </form>
+            <span class="muted" th:if="${r.estado.name() == 'EN_CURSO' or (r.estado.esFinal() and !(r.estado.name() == 'FINALIZADA' and saldos[r.id].signum() > 0))}">Sin acciones</span>
+        </td>
+</tr>
+        <tr th:if="${#lists.isEmpty(reservas)}">
+<td colspan="6" class="center muted">Todavía no tienes reservas registradas.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+    <section class="panel">
+<h2>Historial de pagos</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Pago</th>
+<th>Reserva</th>
+<th>Tipo</th>
+<th>Método</th>
+<th>Monto</th>
+<th>Estado</th>
+<th>Operación</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="p : ${pagos}">
+<td th:text="${p.id}">
+</td>
+<td th:text="${p.reservaId}">
+</td>
+<td th:text="${p.tipo}">
+</td>
+<td th:text="${p.detalle != null ? p.detalle : p.metodo.etiqueta}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(p.monto,1,2)}|">
+</td>
+<td th:text="${p.estado}">
+</td>
+<td th:text="${p.codigoOperacion == null ? '-' : p.codigoOperacion}">
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(pagos)}">
+<td colspan="7" class="center muted">No hay pagos registrados.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+    <section class="panel">
+<h2>Mis comprobantes</h2>
+<p class="muted">Cada pago confirmado genera su boleta electrónica; si el dinero se devuelve, se emite una nota de crédito.</p>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Comprobante</th>
+<th>Número</th>
+<th>Fecha</th>
+<th>Reserva</th>
+<th>Total</th>
+<th>Estado</th>
+<th>PDF</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="c : ${comprobantes}">
+<td th:text="${c.tipo.nombre}">
+</td>
+<td th:text="${c.serieNumero()}">
+</td>
+<td th:text="${#temporals.format(c.fechaEmision,'dd/MM/yyyy')}">
+</td>
+<td th:text="${c.reservaId}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(c.total,1,2)}|">
+</td>
+<td>
+<span class="status" th:text="${c.estado}">
+</span>
+</td>
+<td>
+<a class="btn small outline" th:if="${c.emitido()}" th:href="@{/comprobantes/{id}/pdf(id=${c.id})}" target="_blank">Ver PDF</a>
+<span class="muted" th:unless="${c.emitido()}">En proceso</span>
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(comprobantes)}">
+<td colspan="7" class="center muted">Todavía no tienes comprobantes.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+    <section class="panel">
+<h2>Devoluciones de dinero</h2>
+    <div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Reserva</th>
+<th>Método original</th>
+<th>Monto</th>
+<th>Destino</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="d : ${devoluciones}">
+<td th:text="${d.reservaId}">
+</td>
+<td th:text="${d.metodo.etiqueta}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(d.monto,1,2)}|">
+</td>
+<td th:text="${d.telefonoDestino}">
+</td>
+<td><span th:text="${d.estado}">Estado</span>
+<small class="muted bloque" th:if="${d.codigoOperacion != null}" th:text="|Op. ${d.codigoOperacion}|">op</small>
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(devoluciones)}">
+<td colspan="5" class="center muted">No hay devoluciones registradas.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+</main>
+</body>
+</html>

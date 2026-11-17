@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<!--
+  Expediente de una reserva: TODO lo que pasó con ella y con su dinero.
+  Lo usan el cliente (desde "Mis reservas") y el personal (desde "Operaciones").
+  Se puede imprimir o guardar como PDF con el botón "Imprimir".
+-->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="|Reserva N.° ${d.reserva.id} - AutoRent|">Reserva | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container" th:with="r=${d.reserva}">
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="section-head">
+  <div>
+    <p class="eyebrow">EXPEDIENTE DE LA RESERVA</p>
+    <h1 th:text="|Reserva N.° ${r.id}|">Reserva N.° 1</h1>
+    <span class="status" th:text="${r.estado}">ESTADO</span>
+  </div>
+  <div class="acciones-cabecera no-imprimir">
+    <a class="btn outline" th:href="@{${volver}}">Volver</a>
+    <button class="btn secondary" type="button" onclick="window.print()">Imprimir / guardar PDF</button>
+  </div>
+</div>
+
+<div class="alert danger" th:if="${d.tieneDeuda()}"
+     th:text="|Esta reserva tiene una deuda pendiente de S/ ${#numbers.formatDecimal(d.saldo,1,2)}. Mientras no se pague, el cliente no puede hacer nuevas reservas.|">Deuda</div>
+
+<section class="panel">
+  <h2>Datos del alquiler</h2>
+  <div class="ficha">
+    <div><span>Cliente</span><strong th:text="|${r.cliente.nombres} ${r.cliente.apellidos}|">Nombre</strong>
+      <small th:text="|DNI ${r.cliente.documento} · ${r.cliente.telefono}|">DNI</small></div>
+    <div><span>Vehículo</span><strong th:text="|${r.auto.marca} ${r.auto.modelo}|">Auto</strong>
+      <small th:text="|Placa ${r.auto.placa}|">Placa</small></div>
+    <div><span>Periodo</span><strong th:text="|${#temporals.format(r.fechaInicio,'dd/MM/yyyy')} al ${#temporals.format(r.fechaFin,'dd/MM/yyyy')}|">Fechas</strong>
+      <small th:text="|${r.dias} día(s) x S/ ${#numbers.formatDecimal(r.tarifaDiaria,1,2)}|">Días</small></div>
+    <div><span>Creada</span><strong th:text="${r.creadoEn == null ? '-' : #temporals.format(r.creadoEn,'dd/MM/yyyy HH:mm')}">Fecha</strong>
+      <small th:if="${r.telefonoDevolucion != null}" th:text="|Devoluciones al ${r.telefonoDevolucion}|">Tel</small></div>
+  </div>
+  <p class="notice" th:if="${r.observacion != null}" th:text="|Cargos y notas: ${r.observacion}|">Nota</p>
+</section>
+
+<section class="panel">
+  <h2>Resumen económico</h2>
+  <div class="stats-grid money-grid resumen-4">
+    <div class="stat"><span>Total del alquiler</span><strong th:text="|S/ ${#numbers.formatDecimal(r.total,1,2)}|">0</strong></div>
+    <div class="stat"><span>Pagado (confirmado)</span><strong th:text="|S/ ${#numbers.formatDecimal(d.pagado,1,2)}|">0</strong></div>
+    <div class="stat"><span>Devuelto o por devolver</span><strong th:text="|S/ ${#numbers.formatDecimal(d.devuelto,1,2)}|">0</strong></div>
+    <div class="stat" th:classappend="${d.saldo.signum() > 0} ? 'alerta'"><span>Saldo pendiente</span>
+      <strong th:if="${r.estado.name() != 'CANCELADA' and r.estado.name() != 'VENCIDA' and r.estado.name() != 'NO_PRESENTADO'}"
+              th:text="|S/ ${#numbers.formatDecimal(d.saldo.signum() > 0 ? d.saldo : 0,1,2)}|">0</strong>
+      <strong th:unless="${r.estado.name() != 'CANCELADA' and r.estado.name() != 'VENCIDA' and r.estado.name() != 'NO_PRESENTADO'}">No aplica</strong>
+      <small class="muted" th:if="${r.estado.name() == 'NO_PRESENTADO'}">El anticipo se retuvo como penalidad.</small></div>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Pagos</h2>
+  <p class="muted">Cada pago muestra quién lo registró y quién lo confirmó o rechazó, con fecha y motivo.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>N.°</th><th>Tipo</th><th>Medio</th><th>Monto</th><th>Operación</th><th>Estado</th>
+      <th>Registrado</th><th>Confirmado / rechazado</th></tr></thead>
+    <tbody>
+    <tr th:each="p : ${d.pagos}">
+      <td th:text="${p.id}">1</td>
+      <td th:text="${p.tipo}">ANTICIPO</td>
+      <td><span th:text="${p.metodo.etiqueta}">Yape</span>
+        <small class="bloque muted" th:if="${p.detalle != null}" th:text="${p.detalle}">VISA</small>
+        <small class="bloque muted" th:if="${p.telefonoOrigen != null}" th:text="|Tel. ${p.telefonoOrigen}|">tel</small></td>
+      <td th:text="|S/ ${#numbers.formatDecimal(p.monto,1,2)}|">0</td>
+      <td th:text="${p.codigoOperacion == null ? '-' : p.codigoOperacion}">-</td>
+      <td><span class="status" th:classappend="${p.estado.name() == 'CONFIRMADO'} ? 'green' : (${p.estado.name() == 'PENDIENTE'} ? 'orange' : 'gray')"
+                th:text="${p.estado}">ESTADO</span></td>
+      <td><span th:text="${#temporals.format(p.registradoEn,'dd/MM/yyyy HH:mm')}">fecha</span>
+        <small class="bloque muted" th:text="|por ${p.registradoPor}|">por</small></td>
+      <td><span th:text="${p.procesadoEn == null ? '-' : #temporals.format(p.procesadoEn,'dd/MM/yyyy HH:mm')}">fecha</span>
+        <small class="bloque muted" th:if="${p.procesadoPor != null}" th:text="|por ${p.procesadoPor}|">por</small>
+        <small class="bloque muted" th:if="${p.observacion != null}" th:text="${p.observacion}">motivo</small></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(d.pagos)}"><td colspan="8" class="center muted">Sin pagos.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h2>Comprobantes electrónicos</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Tipo</th><th>Número</th><th>Fecha</th><th>Pago</th><th>Total</th><th>Estado</th><th>PDF</th></tr></thead>
+    <tbody>
+    <tr th:each="c : ${d.comprobantes}">
+      <td th:text="${c.tipo.nombre}">Boleta</td>
+      <td th:text="${c.serieNumero()}">B001-1</td>
+      <td th:text="${#temporals.format(c.fechaEmision,'dd/MM/yyyy')}">fecha</td>
+      <td th:text="|N.° ${c.pagoId}|">1</td>
+      <td th:text="|S/ ${#numbers.formatDecimal(c.total,1,2)}|">0</td>
+      <td><span class="status" th:text="${c.estado}">EMITIDO</span>
+        <small class="bloque muted" th:if="${!c.emitido() and c.mensaje != null}" th:text="${c.mensaje}">msg</small></td>
+      <td><a class="btn small outline no-imprimir" th:if="${c.emitido()}" th:href="@{/comprobantes/{id}/pdf(id=${c.id})}" target="_blank">Ver PDF</a>
+        <span class="muted" th:unless="${c.emitido()}">En proceso</span></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(d.comprobantes)}"><td colspan="7" class="center muted">Todavía no hay comprobantes (se emiten al confirmarse cada pago).</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel" th:if="${!#lists.isEmpty(d.devoluciones)}">
+  <h2>Devoluciones de dinero</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>N.°</th><th>Pago</th><th>Monto</th><th>Medio y destino</th><th>Estado</th><th>Registrada</th><th>Completada</th></tr></thead>
+    <tbody>
+    <tr th:each="v : ${d.devoluciones}">
+      <td th:text="${v.id}">1</td>
+      <td th:text="${v.pagoId == null ? '-' : 'N.° ' + v.pagoId}">1</td>
+      <td th:text="|S/ ${#numbers.formatDecimal(v.monto,1,2)}|">0</td>
+      <td th:text="|${v.metodo.etiqueta} · ${v.telefonoDestino}|">Yape</td>
+      <td><span class="status" th:classappend="${v.estado.name() == 'COMPLETADA'} ? 'green' : 'orange'" th:text="${v.estado}">PENDIENTE</span></td>
+      <td th:text="${#temporals.format(v.registradoEn,'dd/MM/yyyy HH:mm')}">fecha</td>
+      <td><span th:text="${v.completadoEn == null ? '-' : #temporals.format(v.completadoEn,'dd/MM/yyyy HH:mm')}">fecha</span>
+        <small class="bloque muted" th:if="${v.completadoPor != null}" th:text="|por ${v.completadoPor} · op. ${v.codigoOperacion}|">por</small></td>
+    </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h2>Historial de la reserva</h2>
+  <p class="muted">Cada paso queda registrado con su fecha y quién lo hizo. SISTEMA indica una acción automática (plazos vencidos, pasarela de pago o facturación electrónica).</p>
+  <ol class="linea-tiempo">
+    <li th:each="e : ${d.historial}">
+      <div class="lt-fecha" th:text="${#temporals.format(e.fecha,'dd/MM/yyyy HH:mm')}">fecha</div>
+      <div class="lt-cuerpo">
+        <strong th:text="${e.accion.etiqueta}">Acción</strong>
+        <span class="lt-estado" th:if="${e.cambioEstado()}"
+              th:text="|${e.estadoAnterior == null ? 'NUEVA' : e.estadoAnterior} → ${e.estadoNuevo}|">A → B</span>
+        <p th:if="${e.detalle != null}" th:text="${e.detalle}">detalle</p>
+        <small class="muted" th:text="|Por: ${e.usuario}|">usuario</small>
+      </div>
+    </li>
+    <li th:if="${#lists.isEmpty(d.historial)}" class="muted">Esta reserva es anterior a la bitácora: solo se muestran sus pagos y comprobantes.</li>
+  </ol>
+</section>
+</main>
+</body>
+</html>

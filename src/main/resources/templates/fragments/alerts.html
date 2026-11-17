@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<!-- Fragmento reutilizable de avisos de éxito y error. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="alerts">
+    <div class="alert success" th:if="${ok}" th:text="${ok}">
+</div>
+    <div class="alert danger" th:if="${error}" th:text="${error}">
+</div>
+</div>
+</body>
+</html>

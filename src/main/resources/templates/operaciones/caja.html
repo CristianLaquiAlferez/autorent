@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--
+  Historial de pagos y cuadre de caja (personal).
+  Muestra todos los pagos del periodo con quién los registró y quién los procesó,
+  y el total confirmado por método para comparar con el efectivo en caja, el Yape y la pasarela.
+-->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Historial de pagos | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+<main class="container">
+<div th:replace="~{fragments/alerts :: alerts}"></div>
+
+<div class="section-head">
+  <div>
+    <p class="eyebrow">SUCURSAL</p>
+    <h1>Historial de pagos y caja</h1>
+  </div>
+  <div class="acciones-cabecera no-imprimir">
+    <a class="btn outline" th:href="@{/operaciones/reservas}">Volver a reservas</a>
+    <button class="btn secondary" type="button" onclick="window.print()">Imprimir</button>
+  </div>
+</div>
+
+<section class="panel no-imprimir">
+  <form method="get" th:action="@{/operaciones/caja}" class="filtros">
+    <label>Desde <input type="date" name="desde" th:value="${desde}"></label>
+    <label>Hasta <input type="date" name="hasta" th:value="${hasta}"></label>
+    <label>Método
+      <select name="metodo">
+        <option value="">Todos</option>
+        <option th:each="m : ${metodos}" th:value="${m}" th:text="${m.etiqueta}" th:selected="${m == metodo}">Yape</option>
+      </select>
+    </label>
+    <label>Estado
+      <select name="estado">
+        <option value="">Todos</option>
+        <option th:each="e : ${estados}" th:value="${e}" th:text="${e}" th:selected="${e == estado}">CONFIRMADO</option>
+      </select>
+    </label>
+    <button class="btn primary" type="submit">Filtrar</button>
+    <a class="btn outline" th:href="@{/operaciones/caja}">Hoy</a>
+  </form>
+</section>
+
+<section class="panel">
+  <h2 th:text="|Resumen del ${desde == null ? 'inicio' : #temporals.format(desde,'dd/MM/yyyy')} al ${hasta == null ? 'hoy' : #temporals.format(hasta,'dd/MM/yyyy')}|">Resumen</h2>
+  <div class="stats-grid money-grid resumen-4">
+    <div class="stat"><span>Cobrado (confirmado)</span><strong th:text="|S/ ${#numbers.formatDecimal(caja.totalConfirmado,1,2)}|">0</strong></div>
+    <div class="stat"><span>Por validar (pendiente)</span><strong th:text="|S/ ${#numbers.formatDecimal(caja.totalPendiente,1,2)}|">0</strong></div>
+    <div class="stat"><span>Devoluciones registradas</span><strong th:text="|S/ ${#numbers.formatDecimal(caja.totalDevuelto,1,2)}|">0</strong></div>
+    <div class="stat"><span>Neto (cobrado - devoluciones)</span><strong th:text="|S/ ${#numbers.formatDecimal(caja.neto,1,2)}|">0</strong></div>
+  </div>
+  <h3>Cobrado por método</h3>
+  <p class="muted">Compare cada monto con lo que realmente hay: efectivo en caja, movimientos del Yape de la empresa y el panel de la pasarela.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Método</th><th>Total confirmado</th><th>Dónde se verifica</th></tr></thead>
+    <tbody>
+      <tr th:each="m : ${metodos}">
+        <td th:text="${m.etiqueta}">Efectivo</td>
+        <td th:text="|S/ ${#numbers.formatDecimal(caja.totalPorMetodo.get(m),1,2)}|">0</td>
+        <td class="muted" th:switch="${m.name()}">
+          <span th:case="'EFECTIVO'">Arqueo de la caja de la sucursal</span>
+          <span th:case="'YAPE'">Movimientos del Yape de la empresa (código de operación)</span>
+          <span th:case="*">Panel de la pasarela de pagos (código de transacción)</span>
+        </td>
+      </tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel">
+  <h2>Pagos</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>N.°</th><th>Reserva</th><th>Cliente</th><th>Tipo</th><th>Medio</th><th>Monto</th><th>Operación</th>
+      <th>Estado</th><th>Registrado</th><th>Procesado</th></tr></thead>
+    <tbody>
+    <tr th:each="p : ${caja.pagos}" th:with="res=${caja.reservas.get(p.reservaId)}">
+      <td th:text="${p.id}">1</td>
+      <td><a th:href="@{/operaciones/reservas/{id}(id=${p.reservaId})}" th:text="${p.reservaId}">1</a></td>
+      <td th:text="${res == null ? '-' : res.cliente.nombres + ' ' + res.cliente.apellidos}">Cliente</td>
+      <td th:text="${p.tipo}">ANTICIPO</td>
+      <td><span th:text="${p.metodo.etiqueta}">Yape</span>
+        <small class="bloque muted" th:if="${p.detalle != null}" th:text="${p.detalle}">VISA</small></td>
+      <td th:text="|S/ ${#numbers.formatDecimal(p.monto,1,2)}|">0</td>
+      <td th:text="${p.codigoOperacion == null ? '-' : p.codigoOperacion}">-</td>
+      <td><span class="status" th:classappend="${p.estado.name() == 'CONFIRMADO'} ? 'green' : (${p.estado.name() == 'PENDIENTE'} ? 'orange' : 'gray')"
+                th:text="${p.estado}">ESTADO</span>
+        <small class="bloque muted" th:if="${p.observacion != null}" th:text="${p.observacion}">motivo</small></td>
+      <td><span th:text="${#temporals.format(p.registradoEn,'dd/MM HH:mm')}">fecha</span>
+        <small class="bloque muted" th:text="${p.registradoPor}">por</small></td>
+      <td><span th:text="${p.procesadoEn == null ? '-' : #temporals.format(p.procesadoEn,'dd/MM HH:mm')}">fecha</span>
+        <small class="bloque muted" th:if="${p.procesadoPor != null}" th:text="${p.procesadoPor}">por</small></td>
+    </tr>
+    <tr th:if="${#lists.isEmpty(caja.pagos)}"><td colspan="10" class="center muted">No hay pagos con esos filtros.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="panel" th:if="${!#lists.isEmpty(caja.devolucionesPeriodo)}">
+  <h2>Devoluciones del periodo</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>N.°</th><th>Reserva</th><th>Medio</th><th>Monto</th><th>Destino</th><th>Estado</th><th>Evidencia</th></tr></thead>
+    <tbody>
+    <tr th:each="v : ${caja.devolucionesPeriodo}">
+      <td th:text="${v.id}">1</td>
+      <td><a th:href="@{/operaciones/reservas/{id}(id=${v.reservaId})}" th:text="${v.reservaId}">1</a></td>
+      <td th:text="${v.metodo.etiqueta}">Yape</td>
+      <td th:text="|S/ ${#numbers.formatDecimal(v.monto,1,2)}|">0</td>
+      <td th:text="${v.telefonoDestino}">tel</td>
+      <td th:text="${v.estado}">PENDIENTE</td>
+      <td th:text="${v.codigoOperacion == null ? '-' : 'op. ' + v.codigoOperacion + ' (' + v.completadoPor + ')'}">-</td>
+    </tr>
+    </tbody>
+  </table></div>
+</section>
+</main>
+</body>
+</html>

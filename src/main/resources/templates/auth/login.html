@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- Autenticación: formulario de ingreso a AutoRent. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ingresar | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container narrow">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+    <section class="panel">
+        <h1>Iniciar sesión</h1>
+        
+        <div class="alert danger" th:if="${param.error}">Usuario o contraseña incorrectos, o cuenta desactivada.</div>
+        <div class="alert success" th:if="${param.logout}">Sesión cerrada correctamente.</div>
+        <div class="alert success" th:if="${param.registered}">Cuenta registrada. Inicia sesión.</div>
+        <form th:action="@{/login}" method="post" class="form-grid single">
+            <label>Usuario<input type="text" name="username" required autofocus>
+</label>
+            <label>Contraseña<input type="password" name="password" required>
+</label>
+            <button class="btn primary" type="submit">Ingresar</button>
+        </form>
+        <p class="muted center">¿No tienes cuenta? <a th:href="@{/registro}">Regístrate como cliente</a>.</p>
+    </section>
+</main>
+</body>
+</html>

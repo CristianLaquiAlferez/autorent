@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<!-- Reportes: indicadores e historial descargable en PDF. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <p class="eyebrow">CONTROL DEL NEGOCIO</p>
+<h1>Reportes y movimientos</h1>
+    <div class="actions report-download">
+<a class="btn primary" th:href="@{/reportes/descargar-pdf}">Descargar reporte completo en PDF</a>
+</div>
+    <div class="stats-grid">
+        <div class="stat">
+<span>Total de reservas</span>
+<strong th:text="${resumen.totalReservas}">0</strong>
+</div>
+        <div class="stat">
+<span>Pendientes</span>
+<strong th:text="${resumen.reservasPendientes}">0</strong>
+</div>
+        <div class="stat">
+<span>Confirmadas</span>
+<strong th:text="${resumen.reservasConfirmadas}">0</strong>
+</div>
+        <div class="stat">
+<span>Alquileres en curso</span>
+<strong th:text="${resumen.alquileresEnCurso}">0</strong>
+</div>
+        <div class="stat">
+<span>Pagos registrados</span>
+<strong th:text="${resumen.totalPagos}">0</strong>
+</div>
+        <div class="stat">
+<span>Devoluciones pendientes</span>
+<strong th:text="${resumen.devolucionesPendientes}">0</strong>
+</div>
+    </div>
+    <div class="stats-grid money-grid">
+        <div class="stat money">
+<span>Ingresos confirmados</span>
+<strong th:text="|S/ ${#numbers.formatDecimal(resumen.ingresosConfirmados,1,2)}|">S/ 0.00</strong>
+</div>
+        <div class="stat money">
+<span>Devoluciones completadas</span>
+<strong th:text="|S/ ${#numbers.formatDecimal(resumen.devolucionesCompletadas,1,2)}|">S/ 0.00</strong>
+</div>
+        <div class="stat money">
+<span>Ingreso neto</span>
+<strong th:text="|S/ ${#numbers.formatDecimal(resumen.ingresosNetos,1,2)}|">S/ 0.00</strong>
+</div>
+    </div>
+    <section class="panel">
+<h2>Historial de pagos</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Reserva</th>
+<th>Tipo</th>
+<th>Método</th>
+<th>Monto</th>
+<th>Teléfono Yape / devolución efectivo</th>
+<th>Operación</th>
+<th>Estado</th>
+<th>Registrado</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="p : ${resumen.pagos}">
+<td th:text="${p.id}">
+</td>
+<td th:text="${p.reservaId}">
+</td>
+<td th:text="${p.tipo}">
+</td>
+<td th:text="${p.metodo}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(p.monto,1,2)}|">
+</td>
+<td th:text="${p.telefonoOrigen == null ? '-' : p.telefonoOrigen}">
+</td>
+<td th:text="${p.codigoOperacion == null ? '-' : p.codigoOperacion}">
+</td>
+<td th:text="${p.estado}">
+</td>
+<td th:text="${p.registradoEn == null ? '-' : #temporals.format(p.registradoEn,'dd/MM/yyyy HH:mm')}">
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(resumen.pagos)}">
+<td colspan="9" class="center muted">No hay pagos registrados.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+    <section class="panel">
+<h2>Historial de devoluciones</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Reserva</th>
+<th>Monto</th>
+<th>Método</th>
+<th>Destino</th>
+<th>Estado</th>
+<th>Fecha</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="d : ${resumen.devoluciones}">
+<td th:text="${d.id}">
+</td>
+<td th:text="${d.reservaId}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(d.monto,1,2)}|">
+</td>
+<td th:text="${d.metodo}">
+</td>
+<td th:text="${d.telefonoDestino}">
+</td>
+<td th:text="${d.estado}">
+</td>
+<td th:text="${d.registradoEn == null ? '-' : #temporals.format(d.registradoEn,'dd/MM/yyyy HH:mm')}">
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(resumen.devoluciones)}">
+<td colspan="7" class="center muted">No hay devoluciones registradas.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+    <section class="panel">
+<h2>Historial de reservas</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Cliente</th>
+<th>Vehículo</th>
+<th>Fechas</th>
+<th>Total</th>
+<th>Estado</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="r : ${resumen.reservas}">
+<td th:text="${r.id}">
+</td>
+<td th:text="|${r.cliente.nombres} ${r.cliente.apellidos}|">
+</td>
+<td th:text="|${r.auto.marca} ${r.auto.modelo}|">
+</td>
+<td th:text="|${r.fechaInicio} / ${r.fechaFin}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(r.total,1,2)}|">
+</td>
+<td th:text="${r.estado}">
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(resumen.reservas)}">
+<td colspan="6" class="center muted">No hay reservas registradas.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+</main>
+</body>
+</html>

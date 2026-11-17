@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<!-- Vehículos: alta y edición con URL o archivo de imagen. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title th:text="${titulo} + ' | AutoRent'">Vehículo</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container narrow">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<section class="panel">
+<h1 th:text="${titulo}">Vehículo</h1>
+    <form th:action="@{/admin/autos/guardar}" th:object="${form}" method="post" enctype="multipart/form-data" class="form-grid">
+        <input type="hidden" th:field="*{id}">
+        <label>Placa *<input th:field="*{placa}" required maxlength="15">
+</label>
+        <label>Marca *<input th:field="*{marca}" required>
+</label>
+        <label>Modelo *<input th:field="*{modelo}" required>
+</label>
+        <label>Año *<input th:field="*{anio}" type="number" min="1990" th:attr="max=${anioActual + 1}" required>
+</label>
+        <label>Categoría *<select th:field="*{categoria}" required>
+<option value="">Seleccione</option>
+<option value="Sedán">Sedán</option>
+<option value="Compacto">Compacto</option>
+<option value="Hatchback">Hatchback</option>
+<option value="Camioneta">Camioneta</option>
+<option value="SUV">SUV</option>
+<option value="Van">Van</option>
+</select>
+</label>
+        <label>Color<input th:field="*{color}">
+</label>
+        <label>Tarifa diaria (S/) *<input th:field="*{tarifaDiaria}" type="number" min="1" step="0.01" required>
+</label>
+        <label class="full">Descripción<textarea th:field="*{descripcion}" rows="3">
+</textarea>
+</label>
+        <div class="full image-inputs">
+            <h2>Imagen del vehículo</h2>
+            
+            <label>URL de imagen
+                <input type="url" th:field="*{imagenUrl}" maxlength="1000" placeholder="https://ejemplo.com/mi-auto.jpg">
+            </label>
+            <label>Seleccionar imagen (JPG, PNG o WEBP; máximo 5 MB)
+                <input type="file" name="imagenArchivo" id="imagenArchivo" accept="image/jpeg,image/png,image/webp">
+            </label>
+            <div id="vistaImagen" class="image-preview" th:style="${imagenActual == null ? 'display:none' : ''}">
+                <span class="muted">Vista previa</span>
+                <img id="previewImagen" th:src="${imagenActual}" alt="Foto del vehículo" onerror="this.style.display='none'">
+            </div>
+            <label class="image-remove" th:if="${form.id != null}">
+                <input type="checkbox" th:field="*{eliminarImagen}"> Quitar la imagen actual
+            </label>
+        </div>
+        <div class="full actions">
+<button class="btn primary" type="submit">Guardar vehículo</button>
+<a class="btn outline" th:href="@{/admin/autos}">Volver</a>
+</div>
+    </form>
+</section>
+</main>
+<script>
+(function () {
+  const archivo = document.getElementById('imagenArchivo');
+  const url = document.getElementById('imagenUrl');
+  const preview = document.getElementById('previewImagen');
+  const contenedor = document.getElementById('vistaImagen');
+  const quitar = document.getElementById('eliminarImagen');
+  if (!archivo || !preview || !contenedor) return;
+  let temporal = null;
+  function mostrar(src) {
+    if (temporal) { URL.revokeObjectURL(temporal); temporal = null; }
+    if (!src) { preview.removeAttribute('src'); contenedor.style.display = 'none'; return; }
+    preview.style.display = 'block';
+    preview.src = src;
+    contenedor.style.display = 'block';
+  }
+  archivo.addEventListener('change', function () {
+    const foto = archivo.files && archivo.files[0];
+    archivo.setCustomValidity('');
+    if (foto) {
+      if (foto.size > 5 * 1024 * 1024) {
+        archivo.setCustomValidity('La foto no debe superar 5 MB.');
+        archivo.reportValidity();
+        return;
+      }
+      if (url) url.value = '';
+      if (quitar) quitar.checked = false;
+      if (temporal) URL.revokeObjectURL(temporal);
+      temporal = URL.createObjectURL(foto);
+      preview.src = temporal;
+      preview.style.display = 'block';
+      contenedor.style.display = 'block';
+    } else if (url && url.value.trim()) mostrar(url.value.trim());
+  });
+  if (url) url.addEventListener('input', function () {
+    if (url.value.trim()) {
+      archivo.value = '';
+      archivo.setCustomValidity('');
+      if (quitar) quitar.checked = false;
+      mostrar(url.value.trim());
+    }
+  });
+  if (quitar) quitar.addEventListener('change', function () {
+    if (quitar.checked) {
+      archivo.value = '';
+      archivo.setCustomValidity('');
+      if (url) url.value = '';
+      mostrar('');
+    }
+  });
+  window.addEventListener('pagehide', function () { if (temporal) URL.revokeObjectURL(temporal); });
+})();
+</script>
+</body>
+</html>

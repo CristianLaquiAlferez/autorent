@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<!-- Vehículos: catálogo público de autos disponibles. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehículos | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+<div th:replace="~{fragments/alerts :: alerts}">
+</div>
+    <div class="section-head">
+<div>
+<p class="eyebrow">CATÁLOGO</p>
+<h1>Vehículos disponibles</h1>
+</div>
+</div>
+    <div class="vehicle-grid" th:if="${!#lists.isEmpty(autos)}">
+        <article class="vehicle-card" th:each="auto : ${autos}">
+<div class="vehicle-media">
+            <img th:if="${auto.imagenUrl != null}" th:src="${auto.imagenUrl}" alt="Foto del vehículo" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="vehicle-placeholder" th:style="${auto.imagenUrl != null ? 'display:none' : ''}">🚗</div>
+        </div>
+<div class="vehicle-content">
+            <h3 th:text="|${auto.marca} ${auto.modelo}|">Toyota Corolla</h3>
+<p class="muted" th:text="|${auto.categoria} · ${auto.anio} · ${auto.color}|">Sedán</p>
+            <p th:text="${auto.descripcion}">Descripción del vehículo</p>
+<p class="price" th:text="|S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)} / día|">S/ 150.00 / día</p>
+            <a class="btn primary" sec:authorize="hasRole('CLIENTE')" th:href="@{/reservas/nueva/{id}(id=${auto.id})}">Reservar</a>
+            <a class="btn outline" sec:authorize="isAnonymous()" th:href="@{/login}">Ingresar para reservar</a>
+            
+        </div>
+</article>
+    </div>
+    <div class="empty" th:if="${#lists.isEmpty(autos)}">No hay vehículos disponibles en este momento.</div>
+</main>
+</body>
+</html>

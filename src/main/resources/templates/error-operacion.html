@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- Errores: mensaje amigable para operaciones fallidas. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Revisar operación | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container narrow">
+<section class="panel">
+<h1>No se pudo completar la operación</h1>
+<p class="alert danger" th:text="${mensaje}">Revise los datos ingresados.</p>
+
+<div class="actions">
+<a class="btn primary" th:href="@{/inicio}">Ir al inicio</a>
+<a class="btn outline" th:href="@{/autos}">Ver vehículos</a>
+</div>
+</section>
+</main>
+</body>
+</html>

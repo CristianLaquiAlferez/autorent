@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!-- Errores: página general de error. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Error | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container narrow">
+<section class="panel">
+<h1>No se pudo abrir esta página</h1>
+<p>Ocurrió un problema al abrir la página.</p>
+<div class="actions">
+<a class="btn primary" th:href="@{/inicio}">Ir al inicio</a>
+<a class="btn outline" th:href="@{/autos}">Ver vehículos</a>
+</div>
+</section>
+</main>
+</body>
+</html>

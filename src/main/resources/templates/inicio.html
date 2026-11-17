@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<!-- Inicio: accesos principales según el perfil del usuario. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+    <section class="hero">
+<div>
+<p class="eyebrow">SISTEMA DE ALQUILER DE VEHÍCULOS</p>
+<h1>Bienvenido a AutoRent</h1>
+<p>Consulta vehículos, registra reservas y administra los alquileres desde un solo lugar.</p>
+<a class="btn light" th:href="@{/autos}">Ver vehículos</a>
+</div>
+</section>
+    <section sec:authorize="hasRole('CLIENTE')" class="panel">
+<h2>Área del cliente</h2>
+<p>Reserva un vehículo y revisa el estado de tus solicitudes.</p>
+<a class="btn primary" th:href="@{/mis-reservas}">Consultar mis reservas</a>
+</section>
+    <section sec:authorize="hasAnyRole('ADMIN','TRABAJADOR')" class="cards">
+        <a class="stat-card" th:href="@{/operaciones/reservas}">
+<strong>Reservas y alquileres</strong>
+<span>Validar anticipos, registrar pagos y entregas.</span>
+</a>
+        <a class="stat-card" th:href="@{/operaciones/devoluciones}">
+<strong>Devoluciones de dinero</strong>
+<span>Revisar y completar reembolsos.</span>
+</a>
+        <a class="stat-card" th:href="@{/reportes}">
+<strong>Reportes</strong>
+<span>Consultar pagos, reservas e ingresos.</span>
+</a>
+    </section>
+    <section class="section-head">
+<h2>Vehículos disponibles</h2>
+<a th:href="@{/autos}">Ver catálogo</a>
+</section>
+    <div class="vehicle-grid">
+        <article class="vehicle-card" th:each="auto : ${autos}">
+            <div class="vehicle-media">
+            <img th:if="${auto.imagenUrl != null}" th:src="${auto.imagenUrl}" alt="Foto del vehículo" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="vehicle-placeholder" th:style="${auto.imagenUrl != null ? 'display:none' : ''}">🚘</div>
+        </div>
+<div class="vehicle-content">
+<h3 th:text="|${auto.marca} ${auto.modelo}|">Toyota Corolla</h3>
+<p class="muted" th:text="|${auto.categoria} · ${auto.anio} · ${auto.placa}|">Sedán</p>
+<p class="price" th:text="|S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)} por día|">S/ 150.00</p>
+<a class="btn outline" th:href="@{/reservas/nueva/{id}(id=${auto.id})}" sec:authorize="hasRole('CLIENTE')">Reservar</a>
+</div>
+        </article>
+    </div>
+</main>
+</body>
+</html>

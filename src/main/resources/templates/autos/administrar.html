@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<!-- Vehículos: listado administrativo y cambios de estado. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Administrar autos | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+    <div class="section-head">
+<div>
+<p class="eyebrow">ADMINISTRACIÓN</p>
+<h1>Gestión de vehículos</h1>
+</div>
+<a class="btn primary" th:href="@{/admin/autos/nuevo}">+ Registrar vehículo</a>
+</div>
+    <div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Placa</th>
+<th>Vehículo</th>
+<th>Categoría</th>
+<th>Tarifa diaria</th>
+<th>Estado</th>
+<th>Acciones</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="auto : ${autos}">
+<td th:text="${auto.placa}">
+</td>
+<td>
+<div class="auto-list-item">
+            <img th:if="${auto.imagenUrl != null}" th:src="${auto.imagenUrl}" class="auto-thumb" alt="Foto" loading="lazy" onerror="this.style.display='none'">
+            <span th:text="|${auto.marca} ${auto.modelo} (${auto.anio})|">
+</span>
+        </div>
+</td>
+<td th:text="${auto.categoria}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)}|">
+</td>
+<td>
+<span class="status" th:text="${auto.estado}" th:classappend="${auto.estado.name() == 'DISPONIBLE' ? 'green' : (auto.estado.name() == 'MANTENIMIENTO' ? 'orange' : 'gray')}">
+</span>
+</td>
+        <td class="actions">
+<a class="btn small outline" th:href="@{/admin/autos/{id}/editar(id=${auto.id})}">Editar</a>
+            <form th:if="${auto.estado.name() != 'MANTENIMIENTO'}" th:action="@{/admin/autos/{id}/estado(id=${auto.id})}" method="post" class="inline-form">
+<input type="hidden" name="estado" th:value="${auto.estado.name() == 'DISPONIBLE' ? 'INACTIVO' : 'DISPONIBLE'}">
+<button class="btn small secondary" type="submit" th:text="${auto.estado.name() == 'DISPONIBLE' ? 'Desactivar' : 'Activar'}">
+</button>
+</form>
+            <a class="btn small secondary" th:href="@{/admin/mantenimiento}">Mantenimiento</a>
+        </td>
+</tr>
+    </tbody>
+</table>
+</div>
+</main>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- Recepción: devoluciones y reembolsos. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devoluciones | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">TESORERÍA</p>
+<h1>Devoluciones de dinero</h1>
+</div>
+</div>
+    <div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>N.°</th>
+<th>Reserva</th>
+<th>Pago</th>
+<th>Método</th>
+<th>Monto</th>
+<th>Destino</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="d : ${devoluciones}">
+<td th:text="${d.id}">
+</td>
+<td><a th:href="@{/operaciones/reservas/{id}(id=${d.reservaId})}" th:text="${d.reservaId}">1</a>
+</td>
+<td th:text="${d.pagoId == null ? '-' : d.pagoId}">
+</td>
+<td th:text="${d.metodo.etiqueta}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(d.monto,1,2)}|">
+</td>
+<td th:text="${d.telefonoDestino}">
+</td>
+<td>
+<span class="status" th:text="${d.estado}">
+</span>
+</td>
+<td>
+            <form th:if="${d.estado.name() == 'PENDIENTE'}" th:action="@{/operaciones/devoluciones/{id}/completar(id=${d.id})}" method="post" class="mini-form" onsubmit="return confirm('Confirme que ya realizó la devolución al cliente.');">
+<small th:if="${d.metodo.esEnLinea()}">El reembolso automático falló: hágalo desde el panel de la pasarela y anote su código.</small>
+<input name="codigoOperacion" required minlength="4" maxlength="40" pattern="[A-Za-z0-9-]{4,40}" placeholder="Código de la operación de devolución">
+<button class="btn small primary" type="submit">Marcar completada</button>
+</form>
+            <span class="muted bloque" th:if="${d.estado.name() == 'COMPLETADA'}"
+                  th:text="|${#temporals.format(d.completadoEn, 'dd/MM/yyyy HH:mm')} - ${d.completadoPor} (op. ${d.codigoOperacion != null ? d.codigoOperacion : '-'})|">Completada</span>
+        </td>
+</tr>
+        <tr th:if="${#lists.isEmpty(devoluciones)}">
+<td colspan="8" class="center muted">No hay devoluciones registradas.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</main>
+</body>
+</html>

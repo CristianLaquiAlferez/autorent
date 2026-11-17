@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!-- Recepción: gestión de reservas, entregas y pagos. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Operaciones | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+<script th:src="@{/js/telefono-peru.js}" defer>
+</script>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">SUCURSAL</p>
+<h1>Reservas y alquileres</h1>
+</div>
+<div class="acciones-cabecera">
+<a class="btn secondary" th:href="@{/operaciones/caja}">Historial de pagos y caja</a>
+<a class="btn primary" th:href="@{/operaciones/reservas/nueva}">+ Reserva presencial</a>
+</div>
+</div>
+    <section class="panel">
+<h2>Solicitudes y alquileres</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>N.°</th>
+<th>Cliente</th>
+<th>Vehículo</th>
+<th>Fechas</th>
+<th>Total</th>
+<th>Saldo pendiente</th>
+<th>Estado</th>
+<th>Operaciones</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="r : ${reservas}">
+<td>
+<a th:href="@{/operaciones/reservas/{id}(id=${r.id})}" th:text="${r.id}">1</a>
+<a class="small-link bloque" th:href="@{/operaciones/reservas/{id}(id=${r.id})}">Ver historial</a>
+</td>
+<td th:text="|${r.cliente.nombres} ${r.cliente.apellidos}|">
+</td>
+<td th:text="|${r.auto.placa} - ${r.auto.marca} ${r.auto.modelo}|">
+</td>
+<td th:text="|${r.fechaInicio} / ${r.fechaFin}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(r.total,1,2)}|">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(saldos[r.id],1,2)}|">
+</td>
+<td>
+<span class="status" th:text="${r.estado}">
+</span>
+<small class="muted bloque" th:if="${r.observacion != null}" th:text="${r.observacion}">Nota</small>
+</td>
+<td class="operation-cell">
+            <form th:if="${(r.estado.name() == 'CONFIRMADA' or r.estado.name() == 'FINALIZADA') and saldos[r.id].signum() > 0}" th:action="@{/operaciones/reservas/{id}/pago-saldo(id=${r.id})}" method="post" class="mini-form">
+                <strong th:text="${r.estado.name() == 'FINALIZADA' ? 'Cobrar deuda (cargos adicionales)' : 'Registrar saldo'}">Registrar saldo</strong>
+<small>Yape requiere confirmación en la tabla inferior.</small>
+<input type="number" name="monto" min="0.01" step="0.01" th:attr="max=${saldos[r.id]}" th:value="${saldos[r.id]}" placeholder="Monto S/" required>
+                <select name="metodo" required>
+<option value="EFECTIVO">Efectivo</option>
+<option value="YAPE">Yape</option>
+</select>
+                <input name="telefonoYape" placeholder="Número Yape (si aplica)" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
+<input name="codigoOperacion" placeholder="Código (si aplica)">
+                <input name="telefonoDevolucion" placeholder="Número para reembolso si paga efectivo" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
+                <button class="btn small primary" type="submit">Registrar pago</button>
+            </form>
+            <form th:if="${r.estado.name() == 'CONFIRMADA' and saldos[r.id].signum() == 0 and !r.fechaInicio.isAfter(fechaHoy) and r.fechaFin.isAfter(fechaHoy)}" th:action="@{/operaciones/reservas/{id}/entregar(id=${r.id})}" method="post" class="mini-form">
+<strong>Entrega del vehículo</strong>
+<input name="observacion" maxlength="200" required placeholder="Kilometraje, combustible, estado (ej.: 45 200 km, tanque lleno, sin golpes)">
+<button class="btn small secondary" type="submit">Entregar auto</button>
+</form>
+            <form th:if="${r.estado.name() == 'EN_CURSO'}" th:action="@{/operaciones/reservas/{id}/recibir(id=${r.id})}" method="post" class="mini-form">
+<strong>Recepción del vehículo</strong>
+<input name="observacion" maxlength="200" required placeholder="Kilometraje, combustible y estado al recibirlo">
+<small>Si hay daños o falta combustible, registre el cargo (si llega tarde, el retraso se cobra solo).</small>
+<input type="number" name="cargoAdicional" min="0" step="0.01" placeholder="Cargo adicional S/ (opcional)">
+<input name="conceptoCargo" maxlength="120" placeholder="Concepto del cargo (ej.: rayón en puerta)">
+<button class="btn small primary" type="submit">Recibir auto</button>
+</form>
+            <span class="muted" th:if="${r.estado.name() == 'PENDIENTE_PAGO' or r.estado.name() == 'PENDIENTE_VALIDACION'}">Validar el anticipo en la tabla inferior.</span>
+            <form th:if="${(r.estado.name() == 'PENDIENTE_PAGO' or r.estado.name() == 'PENDIENTE_VALIDACION') and r.fechaInicio.isBefore(fechaHoy)}" th:action="@{/operaciones/reservas/{id}/vencer(id=${r.id})}" method="post" onsubmit="return confirm('Compruebe primero que NO se recibió el dinero, especialmente en Yape. ¿Cerrar esta reserva vencida sin pagos confirmados?');">
+<button class="btn small secondary" type="submit">Liberar reserva vencida</button>
+</form>
+            <form th:if="${cancelables.contains(r.id)}" th:action="@{/operaciones/reservas/{id}/cancelar(id=${r.id})}" method="post" class="mini-form" onsubmit="return confirm('¿Anular la reserva? Se devolverá todo lo pagado (tarjeta y PayPal en forma automática).');">
+<input name="motivo" maxlength="150" required placeholder="Motivo de la anulación">
+<button class="btn small danger-btn" type="submit">Anular reserva</button>
+</form>
+            <span class="muted" th:if="${r.estado.name() == 'CONFIRMADA' and saldos[r.id].signum() > 0}">Debe completar el saldo antes de la entrega.</span>
+            <span class="muted" th:if="${r.estado.name() == 'CONFIRMADA' and r.fechaInicio.isAfter(fechaHoy)}">La entrega se habilitará al inicio del alquiler.</span>
+            <span class="muted" th:if="${r.estado.esFinal() and !(r.estado.name() == 'FINALIZADA' and saldos[r.id].signum() > 0)}">Proceso cerrado.</span>
+        </td>
+</tr>
+        <tr th:if="${#lists.isEmpty(reservas)}">
+<td colspan="8" class="center muted">No hay reservas registradas.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+    <section class="panel">
+<h2>Validación de pagos pendientes</h2>
+<p class="muted">Verifique el comprobante antes de confirmar un pago.</p>
+        <div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>Pago</th>
+<th>Reserva</th>
+<th>Método</th>
+<th>Monto</th>
+<th>Teléfono</th>
+<th>Código</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+            <tr th:each="p : ${pagos}">
+<td th:text="${p.id}">
+</td>
+<td th:text="${p.reservaId}">
+</td>
+<td th:text="${p.detalle != null ? p.detalle : p.metodo.etiqueta}">
+</td>
+<td th:text="|S/ ${#numbers.formatDecimal(p.monto,1,2)}|">
+</td>
+<td th:text="${p.telefonoOrigen == null ? '-' : p.telefonoOrigen}">
+</td>
+<td th:text="${p.codigoOperacion == null ? '-' : p.codigoOperacion}">
+</td>
+<td th:text="${p.estado}">
+</td>
+<td>
+                <span class="muted" th:if="${p.estado.name() == 'PENDIENTE' and p.metodo.esEnLinea()}">El cliente está pagando en línea</span>
+                <form th:if="${p.estado.name() == 'PENDIENTE' and !p.metodo.esEnLinea()}" th:action="@{/operaciones/pagos/{id}/confirmar(id=${p.id})}" method="post" onsubmit="return confirm('Confirme solo si ha verificado el ingreso del dinero.');">
+<button class="btn small primary" type="submit">Confirmar pago</button>
+</form>
+                <form th:if="${p.estado.name() == 'PENDIENTE'}" th:action="@{/operaciones/pagos/{id}/rechazar(id=${p.id})}" method="post" class="mini-form" onsubmit="return confirm('¿Rechazar este pago pendiente?');">
+<input name="motivo" maxlength="150" required placeholder="Motivo (ej.: el Yape no llegó)">
+<button class="btn small danger-btn" type="submit">Rechazar</button>
+</form>
+                <span class="muted" th:if="${p.estado.name() != 'PENDIENTE'}" th:text="|${p.procesadoPor != null ? p.procesadoPor : '-'}${p.observacion != null ? ': ' + p.observacion : ''}|">Procesado</span>
+            </td>
+</tr>
+            <tr th:if="${#lists.isEmpty(pagos)}">
+<td colspan="8" class="center muted">No hay pagos registrados.</td>
+</tr>
+        </tbody>
+</table>
+</div>
+    </section>
+</main>
+</body>
+</html>

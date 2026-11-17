@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<!-- Administración: seguimiento de mantenimientos y disponibilidad de autos. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mantenimiento | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">FLOTA</p>
+<h1>Mantenimiento de vehículos</h1>
+</div>
+</div>
+    <section class="panel">
+<h2>Enviar vehículo a mantenimiento</h2>
+<form th:action="@{/admin/mantenimiento/iniciar}" method="post" class="form-grid">
+        <label class="full">Vehículo *<select name="autoId" required>
+<option value="">Seleccione vehículo disponible</option>
+<option th:each="a : ${autos}" th:if="${a.estado.name() == 'DISPONIBLE'}" th:value="${a.id}" th:text="|${a.placa} - ${a.marca} ${a.modelo}|">
+</option>
+</select>
+</label>
+        <label class="full">Descripción del trabajo *<input name="descripcion" required maxlength="500" placeholder="Cambio de aceite, revisión de frenos...">
+</label>
+        <label>Fecha de inicio *<input type="date" name="fechaInicio" required>
+</label>
+<label>Fecha estimada de fin *<input type="date" name="fechaFin" required>
+</label>
+        <div class="full">
+<button class="btn primary" type="submit">Registrar mantenimiento</button>
+</div>
+    </form>
+</section>
+    <section class="panel">
+<h2>Historial de mantenimiento</h2>
+<div class="table-wrap">
+<table>
+<thead>
+<tr>
+<th>N.°</th>
+<th>Vehículo ID</th>
+<th>Descripción</th>
+<th>Inicio</th>
+<th>Fin</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+        <tr th:each="m : ${mantenimientos}">
+<td th:text="${m.id}">
+</td>
+<td th:text="${m.autoId}">
+</td>
+<td th:text="${m.descripcion}">
+</td>
+<td th:text="${m.fechaInicio}">
+</td>
+<td th:text="${m.fechaFin == null ? 'Pendiente' : m.fechaFin}">
+</td>
+<td th:text="${m.estado}">
+</td>
+<td>
+<form th:if="${m.estado.name() == 'EN_PROCESO'}" th:action="@{/admin/mantenimiento/{id}/finalizar(id=${m.id})}" method="post">
+<button class="btn small primary" type="submit">Finalizar</button>
+</form>
+</td>
+</tr>
+        <tr th:if="${#lists.isEmpty(mantenimientos)}">
+<td colspan="7" class="center muted">Sin registros de mantenimiento.</td>
+</tr>
+    </tbody>
+</table>
+</div>
+</section>
+</main>
+</body>
+</html>

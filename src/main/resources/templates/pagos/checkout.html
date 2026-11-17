@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<!-- Cliente: pantalla de pago en línea (PayPal Sandbox y pasarela de tarjeta de prueba). -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Token CSRF: las llamadas de PayPal por JavaScript lo envían para que Spring Security las acepte. -->
+<meta name="_csrf" th:content="${_csrf.token}">
+<meta name="_csrf_header" th:content="${_csrf.headerName}">
+<title>Pagar reserva | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container" th:with="p=${checkout.pago}, r=${checkout.reserva}">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+    <section class="panel">
+        <p class="eyebrow">PAGO EN LÍNEA</p>
+        <h1 th:text="|${p.tipo.name() == 'ANTICIPO' ? 'Anticipo' : 'Saldo'} de la reserva N.° ${r.id}|">Pago</h1>
+        <p class="muted" th:text="|${r.auto.marca} ${r.auto.modelo} (${r.auto.placa}) · del ${#temporals.format(r.fechaInicio,'dd/MM/yyyy')} al ${#temporals.format(r.fechaFin,'dd/MM/yyyy')}|">Vehículo y fechas</p>
+        <div class="pago-resumen">
+            <div><span>Total del alquiler</span><strong th:text="|S/ ${#numbers.formatDecimal(r.total,1,2)}|">S/ 0.00</strong></div>
+            <div><span>Monto a pagar ahora</span><strong th:text="|S/ ${#numbers.formatDecimal(p.monto,1,2)}|">S/ 0.00</strong></div>
+            <div><span>Comprobante</span><strong>Boleta electrónica</strong></div>
+        </div>
+        <p class="muted">Este pago se anula automáticamente si no se completa en 30 minutos. Puede retomarlo desde "Mis reservas".</p>
+    </section>
+
+    <div class="pago-opciones">
+        <section class="pago-opcion" th:if="${checkout.payPalDisponible}">
+            <h2>PayPal</h2>
+            <p class="muted">Pague con su cuenta PayPal o con tarjeta de débito/crédito dentro de PayPal.
+                PayPal cobra en dólares: <strong th:text="|${checkout.payPalMoneda} ${#numbers.formatDecimal(checkout.montoPayPal,1,2)}|">USD 0.00</strong>.</p>
+            <p class="muted"><small>Entorno de pruebas (Sandbox): use una cuenta personal de prueba de PayPal; no se mueve dinero real.</small></p>
+            <div id="paypal-botones"></div>
+            <div class="alert danger" id="paypal-error" hidden></div>
+        </section>
+
+        <section class="pago-opcion">
+            <h2>Tarjeta Visa / Mastercard</h2>
+            <p class="muted" th:text="${checkout.nombrePasarelaTarjeta}">Pasarela de prueba</p>
+            <form th:action="@{/pagos/{id}/tarjeta(id=${p.id})}" method="post" class="form-grid" autocomplete="off">
+                <label class="full">Número de tarjeta *<input name="numero" inputmode="numeric" autocomplete="cc-number"
+                       maxlength="23" placeholder="4111 1111 1111 1111" required></label>
+                <label class="full">Nombre del titular *<input name="titular" autocomplete="cc-name" maxlength="60" placeholder="Como figura en la tarjeta" required></label>
+                <label>Vencimiento (MM/AA) *<input name="vencimiento" autocomplete="cc-exp" maxlength="5" placeholder="12/28" pattern="(0[1-9]|1[0-2])/[0-9]{2}" required></label>
+                <label>CVV *<input name="cvv" type="password" inputmode="numeric" autocomplete="cc-csc" maxlength="3" minlength="3" pattern="[0-9]{3}" required></label>
+                <div class="full actions">
+                    <button class="btn primary" type="submit" th:text="|Pagar S/ ${#numbers.formatDecimal(p.monto,1,2)}|">Pagar</button>
+                    <a class="btn outline" th:href="@{/mis-reservas}">Volver</a>
+                </div>
+            </form>
+            <details class="tarjetas-prueba">
+                <summary>Tarjetas de prueba</summary>
+                <p class="muted">Use cualquier titular, un vencimiento futuro y un CVV de 3 dígitos (000 simula CVV incorrecto).</p>
+                <table>
+                    <tr><td>4111 1111 1111 1111</td><td>Visa</td><td>Aprobada</td></tr>
+                    <tr><td>5555 5555 5555 4444</td><td>Mastercard</td><td>Aprobada</td></tr>
+                    <tr><td>4000 0000 0000 0002</td><td>Visa</td><td>Rechazada por el banco</td></tr>
+                    <tr><td>4000 0000 0000 9995</td><td>Visa</td><td>Fondos insuficientes</td></tr>
+                    <tr><td>5105 1051 0510 5100</td><td>Mastercard</td><td>Tarjeta bloqueada</td></tr>
+                </table>
+            </details>
+            <p class="muted"><small>AutoRent no guarda el número de su tarjeta: solo la marca y los últimos 4 dígitos.</small></p>
+        </section>
+    </div>
+</main>
+
+<script th:if="${checkout.payPalDisponible}"
+        th:src="|https://www.paypal.com/sdk/js?client-id=${checkout.payPalClientId}&currency=${checkout.payPalMoneda}&intent=capture&components=buttons|"></script>
+<script th:if="${checkout.payPalDisponible}" th:inline="javascript">
+(function () {
+    const pagoId = /*[[${checkout.pago.id}]]*/ 0;
+    const base = /*[[@{/pagos/}]]*/ '/pagos/';
+    const encabezado = document.querySelector('meta[name="_csrf_header"]').content;
+    const token = document.querySelector('meta[name="_csrf"]').content;
+    const cajaError = document.getElementById('paypal-error');
+    function mostrarError(texto) { cajaError.textContent = texto; cajaError.hidden = false; }
+    function enviar(url, cuerpo) {
+        const cabeceras = {'Content-Type': 'application/json'};
+        cabeceras[encabezado] = token;
+        return fetch(url, {method: 'POST', headers: cabeceras, body: JSON.stringify(cuerpo || {})})
+            .then(r => r.json().then(d => ({ok: r.ok, datos: d})));
+    }
+    if (!window.paypal) { mostrarError('No se pudo cargar PayPal. Revise su conexión o pague con tarjeta.'); return; }
+    paypal.Buttons({
+        // 1) El servidor crea la orden en PayPal con el monto correcto (el navegador no decide el monto).
+        createOrder: () => enviar(base + pagoId + '/paypal/orden').then(r => {
+            if (!r.ok) throw new Error(r.datos.error || 'No se pudo crear la orden.');
+            return r.datos.id;
+        }),
+        // 2) El cliente aprobó en PayPal: el servidor cobra y verifica.
+        onApprove: (data) => enviar(base + pagoId + '/paypal/capturar', {orderID: data.orderID}).then(r => {
+            if (r.datos.aprobado) { window.location.href = r.datos.redireccion; }
+            else { mostrarError(r.datos.mensaje || 'PayPal no aprobó el pago.'); }
+        }),
+        onError: (err) => mostrarError(err && err.message ? err.message : 'Ocurrió un error con PayPal.')
+    }).render('#paypal-botones');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,44 @@
+# Verificación del proyecto
+
+Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10.4).
+
+- **Pruebas JUnit:** 93 pruebas en `src/test/java`, todas correctas.
+
+| Clase de prueba | Pruebas | Qué comprueba |
+|---|---|---|
+| `ReglasAlquilerTest` | 9 | Días, anticipo del 20 %, regla de 24 horas, máximo 30 días y 180 de anticipación, días de retraso |
+| `ReservaServiceConsultasTest` | 3 | Saldos, reservas cancelables y reintentos de pago |
+| `PasarelaTarjetaSimuladaAdapterTest` | 5 | Luhn, marca, vencimiento, CVV, rechazos simulados, número enmascarado |
+| `FacturacionTest` | 4 | JSON de Nubefact (boleta y nota de crédito), cadena QR de SUNAT, monto en letras |
+| `FlujosDeNegocioTest` | 13 | Pago con tarjeta + boleta, reembolso + nota de crédito, saldo en línea, seguridad entre clientes, pagos abandonados, vencimiento, no presentados, devolución tardía, anulación por el personal, mantenimiento, pantallas y PDF |
+| `TrazabilidadTest` | 6 | Historial completo de un alquiler, deuda por daños que bloquea nuevas reservas, rechazo con motivo y usuario, intento de tarjeta rechazada registrado, anulación con motivo, devolución con evidencia, caja y expediente con permisos |
+| `RobustezTest` | 9 | PayPal de punta a punta (aprobado, monto distinto con devolución, rechazo, orden ajena, doble captura), 10 personas reservando el mismo auto a la vez, doble clic al pagar, boletas en paralelo sin huecos, reglas en sus bordes, retraso + daños, IGV en 20 000 montos, monto en letras, simulación aleatoria con verificación de coherencia |
+| `AdaptadoresExternosTest` | 11 | PayPal y Nubefact contra un servidor que responde como los reales: token, dólares, captura, rechazos, credenciales malas, caídas, reembolso, nota de crédito y recuperación de una boleta ya registrada |
+| `SeguridadWebTest` | 6 | Acceso por rol, CSRF, documentos ajenos, inyección de HTML, cuenta desactivada, datos mal formados sin error 500 |
+| `TelefonoPeruTest` | 2 | Celulares y teléfonos peruanos |
+| `ArchivoImagenesTest` | 2 | Guardado y lectura de fotos de vehículos |
+| `ReportePdfTest` | 1 | PDF de reportes |
+| `AutoRentApplicationTests` | 1 | Arranque de Spring Boot |
+| `AutoRentIntegracionTest` | 21 | Pantallas, seguridad por rol y flujos con Yape y efectivo (HTTP + JPA sobre H2) |
+
+- `FlujosDeNegocioTest` no usa `@Transactional`: cada operación se guarda de verdad, para que también se
+  prueben los pasos posteriores (boleta, reembolso, nota de crédito). Usa un reloj ajustable para
+  "adelantar el tiempo" y probar las tareas automáticas sin esperar.
+- **Base de datos:** no se borra ni se recrea. Al arrancar, Spring Boot agrega las columnas nuevas
+  (`pagos.detalle`, `pagos.procesado_por`, `pagos.observacion`, `devoluciones.codigo_operacion`) y las tablas
+  `comprobantes` e `historial_reservas`. Las reservas creadas antes de esta versión no tienen bitácora; sus pagos y
+  boletas sí se ven en el detalle. El script completo para una instalación nueva está en `database/autorent_db.sql`.
+
+## Pruebas adicionales realizadas
+
+- **Simulación aleatoria ampliada:** la simulación de `RobustezTest` se ejecutó con 20 semillas distintas
+  (unas 8 000 operaciones al azar: reservas, pagos buenos y malos, Yape validados y rechazados, entregas,
+  recepciones con daños, cancelaciones, anulaciones, vencimientos y no presentados). En todas se cumplieron
+  las reglas de coherencia: nunca se cobra más del total ni se devuelve más de lo cobrado, cada pago confirmado
+  tiene exactamente una boleta y cada devolución su nota de crédito, la numeración no tiene huecos, ningún auto
+  tiene reservas cruzadas y el historial de cada reserva termina en su estado actual.
+  Para repetirla: `-Dautorent.simulacion.semillas=20`.
+- **Recorrido en navegador real (Chrome):** 14 pasos del guion de la exposición con cliente, trabajador y
+  administrador, verificando cada pantalla, sin errores de JavaScript, más la vista en celular.
+- **Código QR de las boletas:** se leyó con un lector de QR y contiene la cadena en el orden de SUNAT
+  (RUC | 03 | serie | número | IGV | total | fecha | tipo doc. | DNI | hash).
