@@ -11,6 +11,12 @@ public interface UsuarioRepositoryPort {
     Usuario save(Usuario usuario);
     /** Busca un registro por su identificador. */
     Optional<Usuario> findById(Long id);
+    /**
+     * Bloquea la fila del usuario (SELECT ... FOR UPDATE) hasta que termine la transacción.
+     * Se usa al crear reservas: así las reglas por cliente (máximo de reservas pendientes, deuda)
+     * no se pueden saltar enviando varias solicitudes al mismo tiempo.
+     */
+    Optional<Usuario> findByIdForUpdate(Long id);
     /** Busca un usuario por su nombre de acceso. */
     Optional<Usuario> findByUsername(String username);
     /** Lista todos los registros del modulo. */

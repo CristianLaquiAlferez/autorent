@@ -194,6 +194,51 @@ class RobustezTest {
     }
 
     @Test
+    void unClienteEnviandoSeisReservasALaVezNoSuperaElLimiteDePendientes() throws Exception {
+        Usuario c = cliente();
+        List<Auto> flota = new ArrayList<>();
+        for (int i = 0; i < 6; i++) flota.add(auto("30.00"));
+        ExecutorService hilos = Executors.newFixedThreadPool(6);
+        CountDownLatch salida = new CountDownLatch(1);
+        List<Future<Boolean>> res = new ArrayList<>();
+        for (Auto a : flota) res.add(hilos.submit(() -> {
+            salida.await();
+            try {
+                reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(9), hoy().plusDays(10),
+                        new BigDecimal("6.00"), MetodoPago.TARJETA, null, null, null);
+                return true;
+            } catch (IllegalArgumentException ex) { return false; }
+        }));
+        salida.countDown();
+        int creadas = 0;
+        for (Future<Boolean> f : res) if (f.get(60, TimeUnit.SECONDS)) creadas++;
+        hilos.shutdown();
+        assertEquals(2, creadas, "Un cliente no puede tener más de 2 reservas esperando pago, aunque envíe todo a la vez");
+    }
+
+    @Test
+    void elPersonalConfirmandoElMismoYapeDosVecesALaVezSoloLoConfirmaUnaVez() throws Exception {
+        Usuario c = cliente(); Auto a = auto("70.00");
+        Reserva r = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(5), hoy().plusDays(6),
+                new BigDecimal("70.00"), MetodoPago.YAPE, "987654321", yape(), null);
+        Long pagoId = pagos.findByReservaId(r.id()).get(0).id();
+        ExecutorService hilos = Executors.newFixedThreadPool(4);
+        CountDownLatch salida = new CountDownLatch(1);
+        List<Future<Boolean>> res = new ArrayList<>();
+        for (int i = 0; i < 4; i++) res.add(hilos.submit(() -> {
+            salida.await();
+            try { reservas.confirmarPago(pagoId, "trabajador"); return true; }
+            catch (IllegalArgumentException ex) { return false; }
+        }));
+        salida.countDown();
+        int confirmados = 0;
+        for (Future<Boolean> f : res) if (f.get(60, TimeUnit.SECONDS)) confirmados++;
+        hilos.shutdown();
+        assertEquals(1, confirmados);
+        assertEquals(1, comprobantesRepo.findByReservaId(r.id()).size(), "Una sola boleta");
+    }
+
+    @Test
     void elMismoPagoEnviadoDosVecesALaVezSoloSeCobraUnaVez() throws Exception {
         Usuario c = cliente(); Auto a = auto("60.00");
         Reserva r = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(5), hoy().plusDays(6),
@@ -478,7 +523,7 @@ class RobustezTest {
         }
         System.out.println("Simulación semilla " + semilla + ": " + conteo + " | rechazos por reglas: " + rechazosDeNegocio);
         assertTrue(conteo.getOrDefault("entrega", 0) > 0 && conteo.getOrDefault("recepcion", 0) > 0
-                && conteo.getOrDefault("cancelacion", 0) > 0, "La simulación debe recorrer el ciclo completo: " + conteo);
+                && conteo.getOrDefault("cancelacion", 0) + conteo.getOrDefault("anulacion", 0) > 0, "La simulación debe recorrer el ciclo completo: " + conteo);
         verificarCoherencia(autosSimulados);
     }
 

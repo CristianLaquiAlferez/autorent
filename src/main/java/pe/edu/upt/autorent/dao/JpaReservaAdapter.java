@@ -1,5 +1,7 @@
 package pe.edu.upt.autorent.dao;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.EstadoReserva;
@@ -21,6 +23,7 @@ import java.util.Optional;
 @Repository
 @Transactional
 public class JpaReservaAdapter implements ReservaRepositoryPort {
+    @PersistenceContext private EntityManager em;
     private final ReservaJpaRepository repository;
     private final AutoJpaRepository autos;
     private final UsuarioJpaRepository usuarios;
@@ -40,7 +43,16 @@ public class JpaReservaAdapter implements ReservaRepositoryPort {
     }
     @Override @Transactional(readOnly = true) public Optional<Reserva> findById(Long id) { return repository.findById(id).map(JpaMapper::toDomain); }
     /** Lectura con bloqueo pesimista para modificar la reserva sin conflictos. */
-    @Override public Optional<Reserva> findByIdForUpdate(Long id) { return repository.bloquearPorId(id).map(JpaMapper::toDomain); }
+    /**
+     * Toma el candado (SELECT ... FOR UPDATE) leyendo SIEMPRE de la base de datos.
+     * Antes se guarda lo pendiente (flush) y se vacía la memoria de JPA (clear): así nada de lo que se lea
+     * después del candado sale de una copia vieja en memoria. Es seguro porque los servicios trabajan con
+     * records inmutables, no con entidades JPA.
+     */
+    @Override public Optional<Reserva> findByIdForUpdate(Long id) {
+        em.flush(); em.clear();
+        return repository.bloquearPorId(id).map(JpaMapper::toDomain);
+    }
     @Override @Transactional(readOnly = true) public List<Reserva> findAll() { return repository.findAllByOrderByCreadoEnDesc().stream().map(JpaMapper::toDomain).toList(); }
     @Override @Transactional(readOnly = true) public List<Reserva> findByClienteId(Long id) { return repository.findByCliente_IdOrderByCreadoEnDesc(id).stream().map(JpaMapper::toDomain).toList(); }
     @Override @Transactional(readOnly = true) public List<Reserva> findByAutoId(Long id) { return repository.findByAuto_IdOrderByCreadoEnDesc(id).stream().map(JpaMapper::toDomain).toList(); }

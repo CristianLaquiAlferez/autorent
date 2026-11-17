@@ -1,6 +1,10 @@
 package pe.edu.upt.autorent.dao.springdata;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import pe.edu.upt.autorent.modelo.Rol;
 import pe.edu.upt.autorent.modelo.entidad.UsuarioEntity;
 import java.util.List;
@@ -9,6 +13,9 @@ import java.util.Optional;
 
 public interface UsuarioJpaRepository extends JpaRepository<UsuarioEntity, Long> {
     Optional<UsuarioEntity> findByUsernameIgnoreCase(String username);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from UsuarioEntity u where u.id = :id")
+    Optional<UsuarioEntity> bloquearPorId(@Param("id") Long id);
     List<UsuarioEntity> findAllByOrderByNombresAsc();
     List<UsuarioEntity> findByRolOrderByNombresAsc(Rol rol);
     boolean existsByUsernameIgnoreCase(String username);

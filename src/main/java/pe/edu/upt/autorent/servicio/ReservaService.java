@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.*;
 import pe.edu.upt.autorent.servicio.contrato.ReservaUseCase;
@@ -40,7 +41,10 @@ import java.util.Set;
  */
 
 @Service
-@Transactional
+// READ COMMITTED: después de tomar un candado, cada consulta ve lo que otras transacciones ya guardaron.
+// Con el modo por defecto de MySQL (REPEATABLE READ) la verificación de cruces leía una "foto" vieja
+// y varias reservas simultáneas del mismo auto pasaban a la vez.
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class ReservaService implements ReservaUseCase {
     private static final Logger log = LoggerFactory.getLogger(ReservaService.class);
     /** Un cliente puede tener como máximo esta cantidad de reservas esperando pago (evita acaparar autos). */
@@ -132,6 +136,9 @@ public class ReservaService implements ReservaUseCase {
                                                  String codigoOperacion, String telefonoDevolucion) {
         Usuario cliente = usuarios.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("No se encontró la cuenta del cliente."));
+        // Candado sobre el cliente: si envía varias solicitudes a la vez, se atienden una por una
+        // y el límite de reservas pendientes y la regla de deuda se respetan siempre.
+        cliente = bloquearCliente(cliente.id());
         if (cliente.rol() != Rol.CLIENTE || !cliente.activo()) throw new IllegalArgumentException("Solo un cliente activo puede reservar.");
         // Evita que un cliente bloquee varios autos sin pagar ninguno.
         long pendientes = reservas.findByClienteId(cliente.id()).stream()
@@ -165,6 +172,7 @@ public class ReservaService implements ReservaUseCase {
                                                      String codigoOperacion, String telefonoDevolucion, String trabajador) {
         Usuario cliente = usuarios.findById(clienteId)
                 .orElseThrow(() -> new IllegalArgumentException("Seleccione un cliente registrado."));
+        cliente = bloquearCliente(cliente.id());
         if (cliente.rol() != Rol.CLIENTE || !cliente.activo()) throw new IllegalArgumentException("La cuenta seleccionada no es un cliente activo.");
         validarSinDeuda(cliente);
         Reserva reserva = construirReserva(cliente, autoId, inicio, fin, anticipo, telefonoDevolucion);
@@ -274,6 +282,12 @@ public class ReservaService implements ReservaUseCase {
     }
 
     /** Obtiene la reserva con bloqueo para que nadie la modifique mientras se procesa. */
+    /** Bloquea al cliente hasta el fin de la transacción (orden de candados: primero cliente, luego auto). */
+    private Usuario bloquearCliente(Long clienteId) {
+        return usuarios.findByIdForUpdate(clienteId)
+                .orElseThrow(() -> new IllegalArgumentException("No se encontró la cuenta del cliente."));
+    }
+
     private Reserva obtenerReservaParaActualizar(Long id) {
         return reservas.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Reserva no encontrada."));

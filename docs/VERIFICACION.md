@@ -2,7 +2,7 @@
 
 Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10.4).
 
-- **Pruebas JUnit:** 93 pruebas en `src/test/java`, todas correctas.
+- **Pruebas JUnit:** 95 pruebas en `src/test/java`, todas correctas.
 
 | Clase de prueba | Pruebas | Qué comprueba |
 |---|---|---|
@@ -12,7 +12,7 @@ Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10
 | `FacturacionTest` | 4 | JSON de Nubefact (boleta y nota de crédito), cadena QR de SUNAT, monto en letras |
 | `FlujosDeNegocioTest` | 13 | Pago con tarjeta + boleta, reembolso + nota de crédito, saldo en línea, seguridad entre clientes, pagos abandonados, vencimiento, no presentados, devolución tardía, anulación por el personal, mantenimiento, pantallas y PDF |
 | `TrazabilidadTest` | 6 | Historial completo de un alquiler, deuda por daños que bloquea nuevas reservas, rechazo con motivo y usuario, intento de tarjeta rechazada registrado, anulación con motivo, devolución con evidencia, caja y expediente con permisos |
-| `RobustezTest` | 9 | PayPal de punta a punta (aprobado, monto distinto con devolución, rechazo, orden ajena, doble captura), 10 personas reservando el mismo auto a la vez, doble clic al pagar, boletas en paralelo sin huecos, reglas en sus bordes, retraso + daños, IGV en 20 000 montos, monto en letras, simulación aleatoria con verificación de coherencia |
+| `RobustezTest` | 11 | PayPal de punta a punta (aprobado, monto distinto con devolución, rechazo, orden ajena, doble captura), 10 personas reservando el mismo auto a la vez, un cliente enviando 6 reservas a la vez (límite de 2 pendientes), dos trabajadores confirmando el mismo Yape a la vez, doble clic al pagar, boletas en paralelo sin huecos, reglas en sus bordes, retraso + daños, IGV en 20 000 montos, monto en letras, simulación aleatoria con verificación de coherencia |
 | `AdaptadoresExternosTest` | 11 | PayPal y Nubefact contra un servidor que responde como los reales: token, dólares, captura, rechazos, credenciales malas, caídas, reembolso, nota de crédito y recuperación de una boleta ya registrada |
 | `SeguridadWebTest` | 6 | Acceso por rol, CSRF, documentos ajenos, inyección de HTML, cuenta desactivada, datos mal formados sin error 500 |
 | `TelefonoPeruTest` | 2 | Celulares y teléfonos peruanos |
@@ -42,3 +42,20 @@ Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10
   administrador, verificando cada pantalla, sin errores de JavaScript, más la vista en celular.
 - **Código QR de las boletas:** se leyó con un lector de QR y contiene la cadena en el orden de SUNAT
   (RUC | 03 | serie | número | IGV | total | fecha | tipo doc. | DNI | hash).
+
+## Falla de concurrencia encontrada en MySQL y corregida
+
+La prueba de carga sobre la versión publicada (MySQL 9 en Railway) mostró que 10 solicitudes simultáneas
+para el mismo auto y fechas creaban 10 reservas. Causa: MySQL usa por defecto REPEATABLE READ, que toma una
+"foto" de los datos en la primera lectura de la transacción; la verificación de cruce, hecha después del
+candado, leía esa foto vieja. Las pruebas no lo detectaban porque H2 usa READ COMMITTED.
+
+Corrección:
+- Los servicios que toman candados usan `@Transactional(isolation = Isolation.READ_COMMITTED)`
+  (también configurado en `spring.datasource.hikari.transaction-isolation`).
+- Al crear una reserva se bloquea también al cliente, para que el límite de reservas pendientes y la regla
+  de deuda no se puedan saltar con solicitudes simultáneas.
+- Al tomar un candado se vacía la memoria de JPA, para que todo lo leído después venga de la base de datos.
+
+Las pruebas de concurrencia y la simulación de 20 semillas se ejecutan ahora en los dos modos
+(READ COMMITTED y REPEATABLE READ) y pasan en ambos.

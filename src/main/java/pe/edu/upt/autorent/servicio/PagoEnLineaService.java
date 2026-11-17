@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.*;
 import pe.edu.upt.autorent.repositorio.*;
@@ -25,7 +26,10 @@ import pe.edu.upt.autorent.servicio.contrato.PagoEnLineaUseCase;
  * que además dispara la emisión de la boleta electrónica.
  */
 @Service
-@Transactional
+// READ COMMITTED: después de tomar un candado, cada consulta ve lo que otras transacciones ya guardaron.
+// Con el modo por defecto de MySQL (REPEATABLE READ) la verificación de cruces leía una "foto" vieja
+// y varias reservas simultáneas del mismo auto pasaban a la vez.
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class PagoEnLineaService implements PagoEnLineaUseCase {
     private static final Logger log = LoggerFactory.getLogger(PagoEnLineaService.class);
 

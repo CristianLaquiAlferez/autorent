@@ -1,5 +1,7 @@
 package pe.edu.upt.autorent.dao;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.Rol;
@@ -15,6 +17,7 @@ import java.util.Optional;
 @Transactional
 public class JpaUsuarioAdapter implements UsuarioRepositoryPort {
     private final UsuarioJpaRepository repository;
+    @PersistenceContext private EntityManager em;
     public JpaUsuarioAdapter(UsuarioJpaRepository repository) { this.repository = repository; }
 
     @Override public Usuario save(Usuario usuario) {
@@ -26,6 +29,11 @@ public class JpaUsuarioAdapter implements UsuarioRepositoryPort {
         return JpaMapper.toDomain(repository.save(e));
     }
     @Override @Transactional(readOnly = true) public Optional<Usuario> findById(Long id) { return repository.findById(id).map(JpaMapper::toDomain); }
+    /** Candado leyendo siempre de la base de datos (ver JpaReservaAdapter.findByIdForUpdate). */
+    @Override public Optional<Usuario> findByIdForUpdate(Long id) {
+        em.flush(); em.clear();
+        return repository.bloquearPorId(id).map(JpaMapper::toDomain);
+    }
     @Override @Transactional(readOnly = true) public Optional<Usuario> findByUsername(String username) { return repository.findByUsernameIgnoreCase(username).map(JpaMapper::toDomain); }
     @Override @Transactional(readOnly = true) public List<Usuario> findAll() { return repository.findAllByOrderByNombresAsc().stream().map(JpaMapper::toDomain).toList(); }
     @Override @Transactional(readOnly = true) public List<Usuario> findByRol(Rol rol) { return repository.findByRolOrderByNombresAsc(rol).stream().map(JpaMapper::toDomain).toList(); }

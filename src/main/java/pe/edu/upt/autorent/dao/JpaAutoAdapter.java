@@ -1,5 +1,7 @@
 package pe.edu.upt.autorent.dao;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.Auto;
@@ -15,6 +17,7 @@ import java.util.Optional;
 @Transactional
 public class JpaAutoAdapter implements AutoRepositoryPort {
     private final AutoJpaRepository repository;
+    @PersistenceContext private EntityManager em;
     public JpaAutoAdapter(AutoJpaRepository repository) { this.repository = repository; }
 
     @Override public Auto save(Auto auto) {
@@ -26,7 +29,16 @@ public class JpaAutoAdapter implements AutoRepositoryPort {
         return JpaMapper.toDomain(repository.save(e));
     }
     @Override @Transactional(readOnly = true) public Optional<Auto> findById(Long id) { return repository.findById(id).map(JpaMapper::toDomain); }
-    @Override public Optional<Auto> findByIdForUpdate(Long id) { return repository.bloquearPorId(id).map(JpaMapper::toDomain); }
+    /**
+     * Toma el candado (SELECT ... FOR UPDATE) leyendo SIEMPRE de la base de datos.
+     * Antes se guarda lo pendiente (flush) y se vacía la memoria de JPA (clear): así nada de lo que se lea
+     * después del candado sale de una copia vieja en memoria. Es seguro porque los servicios trabajan con
+     * records inmutables, no con entidades JPA.
+     */
+    @Override public Optional<Auto> findByIdForUpdate(Long id) {
+        em.flush(); em.clear();
+        return repository.bloquearPorId(id).map(JpaMapper::toDomain);
+    }
     @Override @Transactional(readOnly = true) public List<Auto> findAll() { return repository.findAllByOrderByMarcaAscModeloAsc().stream().map(JpaMapper::toDomain).toList(); }
     @Override @Transactional(readOnly = true) public List<Auto> findByEstado(EstadoAuto estado) { return repository.findByEstadoOrderByMarcaAscModeloAsc(estado).stream().map(JpaMapper::toDomain).toList(); }
     @Override @Transactional(readOnly = true) public boolean existsAny() { return repository.count() > 0; }

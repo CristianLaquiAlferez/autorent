@@ -59,6 +59,7 @@ public class ComprobanteService implements ComprobanteUseCase {
         this.usuarios = usuarios; this.facturacion = facturacion; this.pdf = pdf; this.bitacora = bitacora; this.reloj = reloj;
         this.transaccionNueva = new TransactionTemplate(transacciones);
         this.transaccionNueva.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        this.transaccionNueva.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
     }
 
     /** IGV incluido en el precio: base = total / 1.18 y el IGV es la diferencia (así los centavos siempre cuadran). */

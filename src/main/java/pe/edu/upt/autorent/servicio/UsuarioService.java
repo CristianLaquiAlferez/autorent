@@ -1,6 +1,7 @@
 package pe.edu.upt.autorent.servicio;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.Rol;
 import pe.edu.upt.autorent.modelo.TelefonoPeru;
@@ -21,7 +22,10 @@ import java.util.regex.Pattern;
  */
 
 @Service
-@Transactional
+// READ COMMITTED: después de tomar un candado, cada consulta ve lo que otras transacciones ya guardaron.
+// Con el modo por defecto de MySQL (REPEATABLE READ) la verificación de cruces leía una "foto" vieja
+// y varias reservas simultáneas del mismo auto pasaban a la vez.
+@Transactional(isolation = Isolation.READ_COMMITTED)
 public class UsuarioService implements UsuarioUseCase {
     // Reglas de formato: DNI de 8 dígitos y correo con el formato nombre@dominio.ext
     private static final Pattern DNI = Pattern.compile("\\d{8}");
