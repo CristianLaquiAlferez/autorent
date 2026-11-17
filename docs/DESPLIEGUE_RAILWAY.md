@@ -9,7 +9,7 @@ Revisen las condiciones vigentes en railway.com/pricing antes de empezar.
 
 ## 1. Subir el proyecto a GitHub
 
-1. Crear un repositorio **privado** en github.com (por ejemplo `autorent`).
+1. Crear un repositorio vacío en github.com (por ejemplo `autorent`), sin README, .gitignore ni licencia.
 2. Subir la carpeta `AutoRent` (la que tiene `pom.xml` y `Dockerfile`). Desde NetBeans:
    clic derecho en el proyecto > *Versioning* > *Initialize Git Repository*, luego *Git* > *Commit*
    y *Remote* > *Push* a la dirección del repositorio. También sirve GitHub Desktop.
@@ -32,6 +32,8 @@ DB_URL=jdbc:mysql://${{MySQL.MYSQLHOST}}:${{MySQL.MYSQLPORT}}/${{MySQL.MYSQLDATA
 DB_USERNAME=${{MySQL.MYSQLUSER}}
 DB_PASSWORD=${{MySQL.MYSQLPASSWORD}}
 THYMELEAF_CACHE=true
+AUTORENT_ZONA_HORARIA=America/Lima
+PORT=8080
 CLAVE_ADMIN=pongan-una-clave-propia-1
 CLAVE_TRABAJADOR=pongan-una-clave-propia-2
 CLAVE_CLIENTE=Cliente123*
@@ -51,7 +53,8 @@ servicio AutoRent > *Settings* > *Volumes* > *Add Volume* con *Mount path* `/dat
 
 ## 5. Dirección pública
 
-Servicio AutoRent > *Settings* > *Networking* > *Generate Domain*. Railway entrega una dirección como
+Servicio AutoRent > *Settings* > *Networking* > *Generate Domain*, con el puerto **8080**
+(el mismo de la variable `PORT`). Railway entrega una dirección como
 `https://autorent-production.up.railway.app`. La primera vez la aplicación tarda 1 o 2 minutos en arrancar
 (crea las tablas y los datos de demostración).
 
@@ -71,3 +74,10 @@ Servicio AutoRent > *Settings* > *Networking* > *Generate Domain*. Railway entre
 | Contraseñas y claves en el código | Todo se lee de variables de entorno |
 | MySQL nuevo crea columnas `ENUM` que luego no aceptan valores nuevos | Las columnas de estados se crean como `VARCHAR` |
 | Fotos perdidas en cada despliegue | Carpeta configurable apuntando al volumen `/data` |
+
+## Despliegue actual
+
+- Repositorio: `github.com/CristianLaquiAlferez/autorent` (cada `push` a `main` vuelve a desplegar solo).
+- Dirección pública: https://autorent-production-5aa64c61.up.railway.app
+- Servicios en Railway: `autorent` (con volumen en `/data`) y `MySQL` (con su propio volumen).
+- Las claves reales de `admin` y `trabajador` están solo en las variables de Railway, no en este repositorio.
