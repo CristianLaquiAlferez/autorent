@@ -64,12 +64,12 @@
             <span class="muted" th:if="${(r.estado.name() == 'PENDIENTE_PAGO' or r.estado.name() == 'PENDIENTE_VALIDACION' or r.estado.name() == 'CONFIRMADA') and !cancelables.contains(r.id)}">Plazo de cancelación vencido.</span>
             <form th:if="${reintentables.contains(r.id)}" th:action="@{/reservas/{id}/reintentar(id=${r.id})}" method="post" class="mini-form">
                 <strong>Reintentar anticipo rechazado</strong>
-                <input name="montoAnticipo" type="number" min="0.01" step="0.01" placeholder="Monto S/ (mínimo 20%)" required>
+                <input name="montoAnticipo" type="number" step="0.01" th:attr="min=${T(pe.edu.upt.autorent.modelo.ReglasAlquiler).minimoAnticipo(r.total)},max=${r.total},placeholder=|De S/ ${T(pe.edu.upt.autorent.modelo.ReglasAlquiler).minimoAnticipo(r.total)} a S/ ${r.total}|" required>
                 <select name="metodoPago" required>
 <option th:each="m : ${metodos}" th:value="${m}" th:text="${m.etiqueta}">Método</option>
 </select>
                 <input name="telefonoYape" placeholder="Número Yape (si aplica)" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
-                <input name="codigoOperacion" placeholder="Nuevo código Yape" maxlength="40">
+                <input name="codigoOperacion" placeholder="Nuevo código Yape" maxlength="40" pattern="[A-Za-z0-9\-]{4,40}" minlength="4" title="De 4 a 40 letras, números o guiones">
                 <input name="telefonoDevolucion" placeholder="Número devolución efectivo" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
                 <button class="btn small primary" type="submit">Reintentar pago</button>
             </form>

@@ -29,8 +29,8 @@
 
 <section class="panel no-imprimir">
   <form method="get" th:action="@{/operaciones/caja}" class="filtros">
-    <label>Desde <input type="date" name="desde" th:value="${desde}"></label>
-    <label>Hasta <input type="date" name="hasta" th:value="${hasta}"></label>
+    <label>Desde <input type="date" name="desde" id="cajaDesde" th:value="${desde}"></label>
+    <label>Hasta <input type="date" name="hasta" th:value="${hasta}" data-despues-de="cajaDesde" data-dias-min="0" data-mensaje-fecha="'Hasta' no puede ser antes de 'Desde'."></label>
     <label>Método
       <select name="metodo">
         <option value="">Todos</option>

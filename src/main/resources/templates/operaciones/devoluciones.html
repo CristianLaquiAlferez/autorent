@@ -54,7 +54,7 @@
 <td>
             <form th:if="${d.estado.name() == 'PENDIENTE'}" th:action="@{/operaciones/devoluciones/{id}/completar(id=${d.id})}" method="post" class="mini-form" onsubmit="return confirm('Confirme que ya realizó la devolución al cliente.');">
 <small th:if="${d.metodo.esEnLinea()}">El reembolso automático falló: hágalo desde el panel de la pasarela y anote su código.</small>
-<input name="codigoOperacion" required minlength="4" maxlength="40" pattern="[A-Za-z0-9-]{4,40}" placeholder="Código de la operación de devolución">
+<input name="codigoOperacion" required minlength="4" maxlength="40" pattern="[A-Za-z0-9\-]{4,40}" placeholder="Código de la operación de devolución">
 <button class="btn small primary" type="submit">Marcar completada</button>
 </form>
             <span class="muted bloque" th:if="${d.estado.name() == 'COMPLETADA'}"

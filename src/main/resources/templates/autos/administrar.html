@@ -38,7 +38,7 @@
 </td>
 <td>
 <div class="auto-list-item">
-            <img th:if="${auto.imagenUrl != null}" th:src="${auto.imagenUrl}" class="auto-thumb" alt="Foto" loading="lazy" onerror="this.style.display='none'">
+            <img th:src="${auto.imagenUrl != null} ? ${auto.imagenUrl} : @{/autos/{id}/ilustracion.svg(id=${auto.id})}" th:data-respaldo="@{/autos/{id}/ilustracion.svg(id=${auto.id})}" onerror="if(this.src.indexOf('ilustracion')<0){this.src=this.dataset.respaldo}" class="auto-thumb" th:alt="|${auto.marca} ${auto.modelo}|" loading="lazy">
             <span th:text="|${auto.marca} ${auto.modelo} (${auto.anio})|">
 </span>
         </div>

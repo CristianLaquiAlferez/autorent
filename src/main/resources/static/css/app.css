@@ -632,3 +632,7 @@ td .status {
     body { background:#fff }
     .panel { box-shadow:none; border:1px solid #ccc; break-inside:avoid }
 }
+
+/* Ilustraciones de vehículos (SVG): se muestran completas, sin recortar */
+img[src*="ilustracion.svg"] { object-fit:contain; background:#e3ebf3 }
+.vehicle-media img[src*="ilustracion.svg"] { height:auto; aspect-ratio:400/220 }

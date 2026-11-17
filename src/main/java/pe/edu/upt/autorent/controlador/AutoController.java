@@ -4,6 +4,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import org.slf4j.Logger;
@@ -94,6 +95,19 @@ public class AutoController {
     }
 
     /** Devuelve los bytes de una foto para que el navegador la muestre. */
+    /**
+     * Ilustración del vehículo (SVG) según su categoría y color. Se muestra cuando el auto no tiene foto
+     * o cuando la foto no se puede cargar. Es pública, igual que el catálogo.
+     */
+    @GetMapping(value = "/autos/{id}/ilustracion.svg", produces = "image/svg+xml")
+    @ResponseBody
+    public ResponseEntity<String> ilustracion(@PathVariable Long id) {
+        return ResponseEntity.ok()
+                .cacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofHours(1)))
+                .contentType(MediaType.valueOf("image/svg+xml;charset=UTF-8"))
+                .body(pe.edu.upt.autorent.servicio.IlustracionAuto.svg(autos.obtener(id)));
+    }
+
     @GetMapping("/autos/{id}/imagen")
     @ResponseBody
     public ResponseEntity<byte[]> verImagen(@PathVariable Long id) {
@@ -118,6 +132,7 @@ public class AutoController {
 
     /** Pantalla de mantenimiento: vehículos y mantenimientos registrados. */
     @GetMapping("/admin/mantenimiento") public String mantenimiento(Model model) {
+        model.addAttribute("fechaHoy", LocalDate.now()); // el mantenimiento no puede empezar en el pasado
         model.addAttribute("autos", autos.listarTodos());
         model.addAttribute("mantenimientos", autos.listarMantenimientos());
         return "admin/mantenimiento";

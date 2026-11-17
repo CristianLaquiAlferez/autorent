@@ -29,7 +29,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/", "/login", "/registro", "/css/**", "/js/**", "/autos", "/error", "/acceso-denegado").permitAll()
-                .requestMatchers(HttpMethod.GET, "/autos/*/imagen").permitAll()
+                .requestMatchers(HttpMethod.GET, "/autos/*/imagen", "/autos/*/ilustracion.svg").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/operaciones/**", "/reportes", "/reportes/**").hasAnyRole("ADMIN", "TRABAJADOR")
                 .requestMatchers("/reservas/**", "/mis-reservas", "/mis-reservas/**", "/pagos/**").hasRole("CLIENTE")

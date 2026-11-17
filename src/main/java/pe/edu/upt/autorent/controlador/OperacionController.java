@@ -102,7 +102,11 @@ public class OperacionController {
 
     /** Formulario de reserva presencial: solo clientes activos y vehículos disponibles. */
     @GetMapping("/reservas/nueva") public String nuevaReserva(Model model) {
-        model.addAttribute("form", new ReservaForm());
+        // Si se vuelve aquí por un error, el formulario llega con lo que se había escrito (atributo flash).
+        if (!model.containsAttribute("form")) model.addAttribute("form", new ReservaForm());
+        LocalDate hoy = LocalDate.now(reloj);
+        model.addAttribute("fechaMinima", hoy);
+        model.addAttribute("fechaMaxima", hoy.plusDays(pe.edu.upt.autorent.modelo.ReglasAlquiler.MAXIMO_DIAS_ANTICIPACION));
         model.addAttribute("clientes", usuarios.listarPorRol(Rol.CLIENTE).stream().filter(u -> u.activo()).toList());
         model.addAttribute("autos", autos.listarDisponibles());
         model.addAttribute("metodos", List.of(MetodoPago.EFECTIVO, MetodoPago.YAPE)); // en mostrador no hay pasarela
@@ -138,7 +142,12 @@ public class OperacionController {
                     f.getMontoAnticipo(), f.getMetodoPago(), f.getTelefonoYape(), f.getCodigoOperacion(),
                     f.getTelefonoDevolucion(), auth.getName());
             flash.addFlashAttribute("ok", "Reserva presencial creada y anticipo registrado como pagado.");
-        } catch (IllegalArgumentException ex) { flash.addFlashAttribute("error", ex.getMessage()); }
+        } catch (IllegalArgumentException ex) {
+            // Vuelve al formulario con los datos escritos, para no tener que llenarlo otra vez.
+            flash.addFlashAttribute("error", ex.getMessage());
+            flash.addFlashAttribute("form", f);
+            return "redirect:/operaciones/reservas/nueva";
+        }
         return "redirect:/operaciones/reservas";
     }
 

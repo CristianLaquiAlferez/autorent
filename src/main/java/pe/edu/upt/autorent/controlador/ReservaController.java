@@ -65,7 +65,9 @@ public class ReservaController {
     /** Formulario de reserva de un vehículo; muestra el número Yape de la empresa. */
     @GetMapping("/reservas/nueva/{autoId}") public String nueva(@PathVariable Long autoId, Model model) {
         Auto auto = autos.obtener(autoId);
-        ReservaForm form = new ReservaForm(); form.setAutoId(autoId);
+        // Si se vuelve aquí por un error, se conserva lo que el cliente ya había escrito.
+        ReservaForm form = model.containsAttribute("form") ? (ReservaForm) model.getAttribute("form") : new ReservaForm();
+        form.setAutoId(autoId);
         model.addAttribute("auto", auto); model.addAttribute("form", form);
         model.addAttribute("metodos", metodosDisponibles());
         LocalDate hoy = LocalDate.now();
@@ -91,6 +93,7 @@ public class ReservaController {
             return "redirect:/mis-reservas";
         } catch (IllegalArgumentException ex) {
             flash.addFlashAttribute("error", ex.getMessage());
+            flash.addFlashAttribute("form", f);
             return "redirect:/reservas/nueva/" + f.getAutoId();
         }
     }

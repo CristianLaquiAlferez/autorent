@@ -72,7 +72,7 @@
 <option value="YAPE">Yape</option>
 </select>
                 <input name="telefonoYape" placeholder="Número Yape (si aplica)" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
-<input name="codigoOperacion" placeholder="Código (si aplica)">
+<input name="codigoOperacion" placeholder="Código (si aplica)" maxlength="40" pattern="[A-Za-z0-9\-]{4,40}" minlength="4" title="De 4 a 40 letras, números o guiones">
                 <input name="telefonoDevolucion" placeholder="Número para reembolso si paga efectivo" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
                 <button class="btn small primary" type="submit">Registrar pago</button>
             </form>

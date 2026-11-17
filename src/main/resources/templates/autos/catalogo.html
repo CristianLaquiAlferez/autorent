@@ -22,8 +22,7 @@
     <div class="vehicle-grid" th:if="${!#lists.isEmpty(autos)}">
         <article class="vehicle-card" th:each="auto : ${autos}">
 <div class="vehicle-media">
-            <img th:if="${auto.imagenUrl != null}" th:src="${auto.imagenUrl}" alt="Foto del vehículo" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-            <div class="vehicle-placeholder" th:style="${auto.imagenUrl != null ? 'display:none' : ''}">🚗</div>
+            <img th:src="${auto.imagenUrl != null} ? ${auto.imagenUrl} : @{/autos/{id}/ilustracion.svg(id=${auto.id})}" th:data-respaldo="@{/autos/{id}/ilustracion.svg(id=${auto.id})}" onerror="if(this.src.indexOf('ilustracion')<0){this.src=this.dataset.respaldo}" th:alt="|${auto.marca} ${auto.modelo} ${auto.color}|" loading="lazy">
         </div>
 <div class="vehicle-content">
             <h3 th:text="|${auto.marca} ${auto.modelo}|">Toyota Corolla</h3>

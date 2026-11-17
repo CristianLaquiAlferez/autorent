@@ -2,7 +2,7 @@
 
 Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10.4).
 
-- **Pruebas JUnit:** 97 pruebas en `src/test/java`, todas correctas.
+- **Pruebas JUnit:** 102 pruebas en `src/test/java`, todas correctas.
 
 | Clase de prueba | Pruebas | Qué comprueba |
 |---|---|---|
@@ -15,6 +15,7 @@ Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10
 | `RobustezTest` | 12 | PayPal de punta a punta (aprobado, monto distinto con devolución, rechazo, orden ajena, doble captura), 10 personas reservando el mismo auto a la vez, un cliente enviando 6 reservas a la vez (límite de 2 pendientes), dos trabajadores confirmando el mismo Yape a la vez, doble clic al pagar, boletas en paralelo sin huecos, reglas en sus bordes, retraso + daños, IGV en 20 000 montos, monto en letras, simulación aleatoria con verificación de coherencia |
 | `AdaptadoresExternosTest` | 11 | PayPal y Nubefact contra un servidor que responde como los reales: token, dólares, captura, rechazos, credenciales malas, caídas, reembolso, nota de crédito y recuperación de una boleta ya registrada |
 | `SeguridadWebTest` | 6 | Acceso por rol, CSRF, documentos ajenos, inyección de HTML, cuenta desactivada, datos mal formados sin error 500 |
+| `FormulariosTest` | 5 | Límites de fechas y anticipo en cada formulario, reglas de registro y de autos iguales a las del servidor, formulario que conserva lo escrito si hay error, ilustración de vehículos, patrones válidos en navegadores actuales |
 | `TelefonoPeruTest` | 2 | Celulares y teléfonos peruanos |
 | `ArchivoImagenesTest` | 2 | Guardado y lectura de fotos de vehículos |
 | `ReportePdfTest` | 1 | PDF de reportes |
@@ -59,3 +60,11 @@ Corrección:
 
 Las pruebas de concurrencia y la simulación de 20 semillas se ejecutan ahora en los dos modos
 (READ COMMITTED y REPEATABLE READ) y pasan en ambos.
+
+## Validaciones en el navegador (revisión de formularios)
+
+Se revisaron todos los formularios para que el navegador solo deje ingresar lo que el servidor acepta
+(el servidor sigue validando todo). `static/js/validaciones.js` revisa cada fecha al elegirla, porque
+Safari en iPhone no respeta `min`/`max` en su calendario. Comprobado en Chrome: 21 de 21 casos
+(fechas pasadas, devolución entre 1 y 30 días, anticipo entre 20 % y 100 %, registro, mantenimiento,
+formulario que conserva lo escrito tras un error, ilustraciones del catálogo).

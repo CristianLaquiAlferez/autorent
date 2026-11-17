@@ -18,21 +18,21 @@
     <section class="panel">
 <h1>Registrar cliente en sucursal</h1>
         <form th:action="@{/operaciones/clientes/crear}" th:object="${form}" method="post" class="form-grid">
-            <label>Usuario *<input th:field="*{username}" required minlength="4">
+            <label>Usuario *<input th:field="*{username}" required minlength="4" maxlength="60" pattern="[A-Za-z0-9._\-]{4,60}" autocapitalize="none" title="De 4 a 60 letras, números, punto, guion o guion bajo (sin espacios)">
 </label>
-<label>Contraseña temporal *<input th:field="*{password}" type="password" required minlength="8">
+<label>Contraseña temporal *<input th:field="*{password}" type="password" required minlength="8" maxlength="72" pattern="(?=.*[A-Za-zÁÉÍÓÚáéíóúÑñ])(?=.*[0-9]).{8,72}" title="Mínimo 8 caracteres, con letras y números">
 </label>
-            <label>Nombres *<input th:field="*{nombres}" required>
+            <label>Nombres *<input th:field="*{nombres}" required maxlength="80">
 </label>
-<label>Apellidos *<input th:field="*{apellidos}" required>
+<label>Apellidos *<input th:field="*{apellidos}" required maxlength="80">
 </label>
-            <label>DNI *<input th:field="*{documento}" required pattern="[0-9]{8}" maxlength="8">
+            <label>DNI *<input th:field="*{documento}" required pattern="[0-9]{8}" maxlength="8" minlength="8" inputmode="numeric" title="DNI de 8 dígitos">
 </label>
-<label>Correo *<input th:field="*{correo}" type="email" required>
+<label>Correo *<input th:field="*{correo}" type="email" required maxlength="120">
 </label>
             <label>Teléfono<input th:field="*{telefono}" type="tel" inputmode="numeric" maxlength="9" minlength="6" pattern="[0-9]{6,9}" data-telefono-peru="contacto" title="Ingrese de 6 a 9 dígitos (sin +51)">
 </label>
-<label>Dirección<input th:field="*{direccion}">
+<label>Dirección<input th:field="*{direccion}" maxlength="200">
 </label>
             <div class="full actions">
 <button class="btn primary" type="submit">Guardar cliente</button>

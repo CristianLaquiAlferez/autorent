@@ -20,7 +20,7 @@
 <p>
 <a th:href="@{/operaciones/clientes/nuevo}">+ Registrar un cliente nuevo</a>
 </p>
-        <form th:action="@{/operaciones/reservas/crear}" th:object="${form}" method="post" class="form-grid">
+        <form th:action="@{/operaciones/reservas/crear}" th:object="${form}" method="post" class="form-grid" id="reservaPresencial">
             <label class="full">Cliente *<select th:field="*{clienteId}" required>
 <option value="">Seleccione cliente</option>
 <option th:each="c : ${clientes}" th:value="${c.id}" th:text="|${c.nombres} ${c.apellidos} - ${c.documento}|">
@@ -29,13 +29,13 @@
 </label>
             <label class="full">Vehículo *<select th:field="*{autoId}" required>
 <option value="">Seleccione vehículo</option>
-<option th:each="a : ${autos}" th:value="${a.id}" th:text="|${a.placa} - ${a.marca} ${a.modelo} - S/ ${a.tarifaDiaria}/día|">
+<option th:each="a : ${autos}" th:value="${a.id}" th:attr="data-tarifa=${a.tarifaDiaria}" th:text="|${a.placa} - ${a.marca} ${a.modelo} - S/ ${a.tarifaDiaria}/día|">
 </option>
 </select>
 </label>
-            <label>Fecha de recojo *<input th:field="*{fechaInicio}" type="date" required>
+            <label>Fecha de recojo *<input th:field="*{fechaInicio}" type="date" th:attr="min=${fechaMinima},max=${fechaMaxima}" required>
 </label>
-            <label>Fecha de devolución *<input th:field="*{fechaFin}" type="date" required>
+            <label>Fecha de devolución *<input th:field="*{fechaFin}" type="date" required data-despues-de="fechaInicio" data-dias-min="1" data-dias-max="30" data-mensaje-fecha="La devolución es de 1 a 30 días después del recojo.">
 </label>
             <label>Anticipo recibido (S/) *<input th:field="*{montoAnticipo}" type="number" min="0.01" step="0.01" required>
 </label>
@@ -52,11 +52,11 @@
 </div>
             <label>Número Yape<input th:field="*{telefonoYape}" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
 </label>
-            <label>Código de operación<input th:field="*{codigoOperacion}" maxlength="40">
+            <label>Código de operación<input th:field="*{codigoOperacion}" maxlength="40" pattern="[A-Za-z0-9\-]{4,40}" minlength="4" title="De 4 a 40 letras, números o guiones">
 </label>
             <label class="full">Número para devolución si pagó en efectivo<input th:field="*{telefonoDevolucion}" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
 </label>
-            <div class="notice full">Anticipo mínimo: 20% del total.</div>
+            <div class="notice full" id="calculoPresencial">Anticipo mínimo: 20% del total. Elija vehículo y fechas para calcularlo.</div>
             <div class="full actions">
 <button class="btn primary" type="submit">Registrar reserva</button>
 <a class="btn outline" th:href="@{/operaciones/reservas}">Volver</a>
@@ -64,5 +64,28 @@
         </form>
     </section>
 </main>
+<script>
+// Calcula total y anticipo mínimo con la tarifa del vehículo elegido, y limita el anticipo al rango 20 %–100 %.
+(function () {
+    const auto = document.getElementById('autoId'), ini = document.getElementById('fechaInicio'),
+          fin = document.getElementById('fechaFin'), anticipo = document.getElementById('montoAnticipo'),
+          salida = document.getElementById('calculoPresencial');
+    if (!auto || !ini || !fin || !anticipo || !salida) return;
+    function calcular() {
+        const opcion = auto.options[auto.selectedIndex];
+        const tarifa = Number(opcion && opcion.dataset.tarifa || 0);
+        if (!tarifa || !ini.value || !fin.value) { anticipo.min = '0.01'; anticipo.removeAttribute('max');
+            salida.textContent = 'Anticipo mínimo: 20% del total. Elija vehículo y fechas para calcularlo.'; return; }
+        const dias = Math.round((new Date(fin.value + 'T00:00:00') - new Date(ini.value + 'T00:00:00')) / 86400000);
+        if (dias <= 0) { salida.textContent = 'La devolución debe ser posterior al recojo.'; return; }
+        const total = dias * tarifa, minimo = Math.round(total * 20) / 100;
+        anticipo.min = minimo.toFixed(2); anticipo.max = total.toFixed(2);
+        salida.textContent = 'Duración: ' + dias + ' día(s). Total: S/ ' + total.toFixed(2)
+            + '. Anticipo: de S/ ' + minimo.toFixed(2) + ' a S/ ' + total.toFixed(2) + '.';
+    }
+    [auto, ini, fin].forEach(c => c.addEventListener('change', calcular));
+    calcular();
+})();
+</script>
 </body>
 </html>

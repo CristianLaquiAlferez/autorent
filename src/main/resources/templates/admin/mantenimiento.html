@@ -30,9 +30,9 @@
 </label>
         <label class="full">Descripción del trabajo *<input name="descripcion" required maxlength="500" placeholder="Cambio de aceite, revisión de frenos...">
 </label>
-        <label>Fecha de inicio *<input type="date" name="fechaInicio" required>
+        <label>Fecha de inicio *<input type="date" name="fechaInicio" id="mantInicio" th:attr="min=${fechaHoy}" required>
 </label>
-<label>Fecha estimada de fin *<input type="date" name="fechaFin" required>
+<label>Fecha estimada de fin *<input type="date" name="fechaFin" required data-despues-de="mantInicio" data-dias-min="0" data-mensaje-fecha="El fin no puede ser antes del inicio.">
 </label>
         <div class="full">
 <button class="btn primary" type="submit">Registrar mantenimiento</button>
