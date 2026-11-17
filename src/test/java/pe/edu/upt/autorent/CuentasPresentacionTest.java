@@ -7,7 +7,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import pe.edu.upt.autorent.modelo.Rol;
+import pe.edu.upt.autorent.modelo.EstadoReserva;
+import pe.edu.upt.autorent.modelo.Reserva;
 import pe.edu.upt.autorent.repositorio.UsuarioRepositoryPort;
+import pe.edu.upt.autorent.servicio.contrato.ReservaUseCase;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
@@ -22,11 +28,13 @@ import static org.springframework.security.test.web.servlet.response.SecurityMoc
 @TestPropertySource(properties = {
         "spring.datasource.url=jdbc:h2:mem:autorent_presentacion;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE",
         "autorent.demo.clave-docente=PruebaDocente1",
-        "autorent.demo.clave-curso-trabajador=PruebaCurso1"})
+        "autorent.demo.clave-curso-trabajador=PruebaCurso1",
+        "autorent.demo.reservas=true"})
 class CuentasPresentacionTest {
 
     @Autowired private MockMvc mvc;
     @Autowired private UsuarioRepositoryPort usuarios;
+    @Autowired private ReservaUseCase reservas;
 
     @Test
     void seCreanSoloLasCuentasConContrasenaDefinida() throws Exception {
@@ -38,5 +46,16 @@ class CuentasPresentacionTest {
                 .andExpect(authenticated().withRoles("ADMIN"));
         mvc.perform(formLogin("/login").user("curso.trabajador").password("PruebaCurso1"))
                 .andExpect(authenticated().withRoles("TRABAJADOR"));
+    }
+
+    @Test
+    void lasReservasDeDemostracionCubrenCadaEstadoDelProceso() {
+        Set<EstadoReserva> estados = reservas.listarTodas().stream()
+                .filter(r -> r.cliente().username().startsWith("demo."))
+                .map(Reserva::estado).collect(Collectors.toSet());
+        assertEquals(Set.of(EstadoReserva.FINALIZADA, EstadoReserva.EN_CURSO, EstadoReserva.CONFIRMADA,
+                EstadoReserva.PENDIENTE_VALIDACION, EstadoReserva.CANCELADA), estados);
+        assertTrue(reservas.listarDevoluciones().stream()
+                .anyMatch(d -> d.estado().name().equals("PENDIENTE")), "la reserva cancelada deja una devolución pendiente");
     }
 }

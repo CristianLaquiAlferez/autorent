@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
 import pe.edu.upt.autorent.modelo.*;
 import pe.edu.upt.autorent.repositorio.AutoRepositoryPort;
 import pe.edu.upt.autorent.repositorio.PasswordEncoderPort;
@@ -19,8 +21,9 @@ public class DataInitializer {
      * En un servidor público (Railway) se deben definir, porque las contraseñas por defecto están en el código.
      */
     @Bean
+    @Order(1)
     CommandLineRunner cargarDatosIniciales(UsuarioRepositoryPort usuarios, AutoRepositoryPort autos,
-                                            PasswordEncoderPort encoder,
+                                            PasswordEncoderPort encoder, Environment entorno,
                                             @Value("${autorent.demo.clave-admin:Admin123*}") String claveAdmin,
                                             @Value("${autorent.demo.clave-trabajador:Trabajador123*}") String claveTrabajador,
                                             @Value("${autorent.demo.clave-cliente:Cliente123*}") String claveCliente,
@@ -50,6 +53,15 @@ public class DataInitializer {
                         "70000006", "curso.cliente@autorent.demo", "999666666", "Tacna", Rol.CLIENTE);
             }
 
+            // Si la contraseña de una cuenta de demostración se define (o se cambia) en una variable de entorno,
+            // se actualiza al arrancar. Así se cierran las contraseñas por defecto en el servidor público.
+            sincronizarClave(usuarios, encoder, entorno, "admin", "CLAVE_ADMIN");
+            sincronizarClave(usuarios, encoder, entorno, "trabajador", "CLAVE_TRABAJADOR");
+            sincronizarClave(usuarios, encoder, entorno, "cliente", "CLAVE_CLIENTE");
+            sincronizarClave(usuarios, encoder, entorno, "docente", "CLAVE_DOCENTE");
+            sincronizarClave(usuarios, encoder, entorno, "curso.trabajador", "CLAVE_CURSO_TRABAJADOR");
+            sincronizarClave(usuarios, encoder, entorno, "curso.cliente", "CLAVE_CURSO_CLIENTE");
+
             if (!autos.existsAny()) {
                 autos.save(new Auto(null, "V1A-101", "Toyota", "Corolla", 2023, "Sedán", "Plata", new BigDecimal("150.00"), "Sedán cómodo para ciudad y carretera.", EstadoAuto.DISPONIBLE));
                 autos.save(new Auto(null, "V1B-202", "Kia", "Rio", 2022, "Compacto", "Blanco", new BigDecimal("110.00"), "Vehículo económico para recorridos urbanos.", EstadoAuto.DISPONIBLE));
@@ -58,6 +70,19 @@ public class DataInitializer {
                 autos.save(new Auto(null, "V1E-505", "Toyota", "Hilux", 2022, "Camioneta", "Gris", new BigDecimal("250.00"), "Camioneta para viajes y carga ligera.", EstadoAuto.DISPONIBLE));
             }
         };
+    }
+
+    /** Actualiza la contraseña de la cuenta cuando la variable de entorno existe y no coincide con la guardada. */
+    private void sincronizarClave(UsuarioRepositoryPort usuarios, PasswordEncoderPort encoder, Environment entorno,
+                                  String username, String variable) {
+        String clave = entorno.getProperty(variable);
+        if (clave == null || clave.isBlank()) return;
+        usuarios.findByUsername(username).ifPresent(u -> {
+            if (!encoder.matches(clave, u.passwordHash())) {
+                usuarios.save(new Usuario(u.id(), u.username(), encoder.encode(clave), u.nombres(), u.apellidos(),
+                        u.documento(), u.correo(), u.telefono(), u.direccion(), u.rol(), u.activo()));
+            }
+        });
     }
 
     /** No duplica cuentas: si el usuario ya existe en la base de datos, no hace nada. */
