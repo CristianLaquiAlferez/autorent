@@ -142,7 +142,7 @@ class FlujosDeNegocioTest {
         assertEquals(EstadoDevolucion.COMPLETADA, d.estado(), "la pasarela devuelve el dinero sin intervención del personal");
         assertEquals("SISTEMA", d.completadoPor());
         assertTrue(d.codigoOperacion().startsWith("SIMR-"));
-        assertEquals("VISA **** 1111", d.telefonoDestino());
+        assertEquals("Tarjeta **** 1111", d.telefonoDestino());
         List<Comprobante> lista = comprobantes.listarDeCliente(c.username());
         Comprobante nota = lista.stream().filter(x -> x.tipo() == TipoComprobante.NOTA_CREDITO).findFirst().orElseThrow();
         Comprobante boleta = lista.stream().filter(x -> x.tipo() == TipoComprobante.BOLETA).findFirst().orElseThrow();

@@ -71,7 +71,7 @@ Las imagenes subidas se almacenan por defecto en `${user.home}/AutoRent/imagenes
 
 Los tests JUnit se encuentran en `src/test/java` y se ejecutan con **Clean and Build**. Cubren reglas del alquiler, archivos, telefonos, PDF, arranque de Spring Boot y flujos HTTP/JPA/Security con H2 en memoria.
 
-El proyecto tiene 96 pruebas JUnit y todas pasan con **Clean and Build** en NetBeans. El detalle está en `docs/VERIFICACION.md`.
+El proyecto tiene 97 pruebas JUnit y todas pasan con **Clean and Build** en NetBeans. El detalle está en `docs/VERIFICACION.md`.
 
 ## Unidad 2: pagos, boletas y hosting
 

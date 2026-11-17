@@ -72,4 +72,17 @@ class ReservaServiceConsultasTest {
 
         assertEquals(Set.of(1L), reintentables);
     }
+
+    @org.junit.jupiter.api.Test
+    void elDestinoDeUnReembolsoEnLineaEsCortoYNoSeCorta() {
+        java.util.function.BiFunction<MetodoPago, String, String> destino = (m, detalle) -> ReservaService.destinoEnLinea(
+                new Pago(1L, 1L, java.math.BigDecimal.TEN, m, TipoPago.ANTICIPO, EstadoPago.CONFIRMADO, null, "X",
+                        java.time.LocalDateTime.now(), null, "c", detalle, null, null));
+        org.junit.jupiter.api.Assertions.assertEquals("Cuenta PayPal", destino.apply(MetodoPago.PAYPAL, "PayPal comprador-muy-largo@personal.example.com"));
+        org.junit.jupiter.api.Assertions.assertEquals("Tarjeta **** 1111", destino.apply(MetodoPago.PAYPAL, "VISA **** 1111 (PayPal)"));
+        org.junit.jupiter.api.Assertions.assertEquals("Tarjeta **** 4444", destino.apply(MetodoPago.TARJETA, "MASTERCARD **** 4444"));
+        org.junit.jupiter.api.Assertions.assertEquals("Tarjeta del pago", destino.apply(MetodoPago.TARJETA, null));
+        for (String d : new String[]{"Cuenta PayPal", "Tarjeta **** 1111", "Tarjeta del pago"})
+            org.junit.jupiter.api.Assertions.assertTrue(d.length() <= 20);
+    }
 }

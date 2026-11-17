@@ -599,11 +599,20 @@ public class ReservaService implements ReservaUseCase {
     }
 
     /** A dónde vuelve el dinero: la misma tarjeta/PayPal, el mismo Yape o el número registrado para efectivo. */
+    /**
+     * Destino de un reembolso en línea, en pocas palabras y sin cortar texto: el dinero vuelve al mismo
+     * medio con que se pagó. "Tarjeta **** 1111" si se pagó con tarjeta (también dentro de PayPal)
+     * o "Cuenta PayPal". El correo del pagador queda en el detalle del pago.
+     */
+    static String destinoEnLinea(Pago p) {
+        java.util.regex.Matcher ultimos = java.util.regex.Pattern.compile("\\*{4} ?(\\d{4})")
+                .matcher(p.detalle() == null ? "" : p.detalle());
+        if (ultimos.find()) return "Tarjeta **** " + ultimos.group(1);
+        return p.metodo() == MetodoPago.PAYPAL ? "Cuenta PayPal" : "Tarjeta del pago";
+    }
+
     private String destinoDevolucion(Reserva r, Pago p) {
-        if (p.metodo().esEnLinea()) {
-            String detalle = p.detalle() == null || p.detalle().isBlank() ? p.metodo().getEtiqueta() : p.detalle();
-            return detalle.length() > 20 ? detalle.substring(0, 20) : detalle;
-        }
+        if (p.metodo().esEnLinea()) return destinoEnLinea(p);
         String telefono = p.telefonoOrigen() != null && !p.telefonoOrigen().isBlank() ? p.telefonoOrigen() : r.telefonoDevolucion();
         if (telefono == null || telefono.isBlank())
             throw new IllegalArgumentException("No existe un número de destino para devolver el pago en efectivo.");

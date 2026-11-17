@@ -2,12 +2,12 @@
 
 Comprobado con Apache NetBeans 25 (Clean and Build) y MySQL de XAMPP (MariaDB 10.4).
 
-- **Pruebas JUnit:** 96 pruebas en `src/test/java`, todas correctas.
+- **Pruebas JUnit:** 97 pruebas en `src/test/java`, todas correctas.
 
 | Clase de prueba | Pruebas | Qué comprueba |
 |---|---|---|
 | `ReglasAlquilerTest` | 9 | Días, anticipo del 20 %, regla de 24 horas, máximo 30 días y 180 de anticipación, días de retraso |
-| `ReservaServiceConsultasTest` | 3 | Saldos, reservas cancelables y reintentos de pago |
+| `ReservaServiceConsultasTest` | 4 | Saldos, reservas cancelables y reintentos de pago |
 | `PasarelaTarjetaSimuladaAdapterTest` | 5 | Luhn, marca, vencimiento, CVV, rechazos simulados, número enmascarado |
 | `FacturacionTest` | 4 | JSON de Nubefact (boleta y nota de crédito), cadena QR de SUNAT, monto en letras |
 | `FlujosDeNegocioTest` | 13 | Pago con tarjeta + boleta, reembolso + nota de crédito, saldo en línea, seguridad entre clientes, pagos abandonados, vencimiento, no presentados, devolución tardía, anulación por el personal, mantenimiento, pantallas y PDF |
