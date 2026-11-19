@@ -100,7 +100,7 @@ public class OperacionController {
         return "operaciones/reservas";
     }
 
-    /** Formulario de reserva presencial: solo clientes activos y vehículos disponibles. */
+    /** Formulario de reserva presencial: solo clientes activos y vehículos que se pueden reservar. */
     @GetMapping("/reservas/nueva") public String nuevaReserva(Model model) {
         // Si se vuelve aquí por un error, el formulario llega con lo que se había escrito (atributo flash).
         if (!model.containsAttribute("form")) model.addAttribute("form", new ReservaForm());
@@ -108,11 +108,50 @@ public class OperacionController {
         model.addAttribute("fechaMinima", hoy);
         model.addAttribute("fechaMaxima", hoy.plusDays(pe.edu.upt.autorent.modelo.ReglasAlquiler.MAXIMO_DIAS_ANTICIPACION));
         model.addAttribute("clientes", usuarios.listarPorRol(Rol.CLIENTE).stream().filter(u -> u.activo()).toList());
-        model.addAttribute("autos", autos.listarDisponibles());
+        model.addAttribute("autos", autos.listarReservables());
         model.addAttribute("metodos", List.of(MetodoPago.EFECTIVO, MetodoPago.YAPE)); // en mostrador no hay pasarela
         model.addAttribute("yapeNegocio", yapeNegocio);
         model.addAttribute("titularYape", titularYape);
         return "operaciones/reserva-presencial";
+    }
+
+    /** Lista de clientes: para buscar a uno y corregir sus datos. */
+    @GetMapping("/clientes") public String clientes(Model model) {
+        model.addAttribute("clientes", usuarios.listarPorRol(Rol.CLIENTE));
+        return "operaciones/clientes";
+    }
+
+    /** Formulario para corregir los datos de un cliente (por ejemplo, un DNI mal escrito al registrarlo). */
+    @GetMapping("/clientes/{id}/editar") public String editarCliente(@PathVariable Long id, Model model, RedirectAttributes flash) {
+        try {
+            var u = usuarios.obtener(id);
+            if (u.rol() != Rol.CLIENTE) throw new IllegalArgumentException("Solo puede corregir los datos de clientes.");
+            if (!model.containsAttribute("form")) model.addAttribute("form", RegistroForm.de(u));
+            model.addAttribute("usuario", u);
+            model.addAttribute("titulo", "Editar datos de " + u.nombres() + " " + u.apellidos());
+            model.addAttribute("accion", "/operaciones/clientes/" + id + "/editar");
+            model.addAttribute("volver", "/operaciones/clientes");
+            model.addAttribute("soloContacto", false);
+            return "usuarios/editar";
+        } catch (IllegalArgumentException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/operaciones/clientes";
+        }
+    }
+
+    /** Guarda la corrección de un cliente; el servicio revisa que quien edita pueda hacerlo. */
+    @PostMapping("/clientes/{id}/editar") public String guardarCliente(@PathVariable Long id, @ModelAttribute("form") RegistroForm form,
+            Authentication auth, RedirectAttributes flash) {
+        try {
+            usuarios.actualizarDatos(id, form.getNombres(), form.getApellidos(), form.getDocumento(), form.getCorreo(),
+                    form.getTelefono(), form.getDireccion(), auth.getName());
+            flash.addFlashAttribute("ok", "Datos del cliente actualizados.");
+            return "redirect:/operaciones/clientes";
+        } catch (IllegalArgumentException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            flash.addFlashAttribute("form", form);
+            return "redirect:/operaciones/clientes/" + id + "/editar";
+        }
     }
 
     /** Formulario para registrar a un cliente que llega a la sucursal sin cuenta. */
@@ -143,7 +182,9 @@ public class OperacionController {
             reservas.crearReservaPresencial(f.getClienteId(), f.getAutoId(), f.getFechaInicio(), f.getFechaFin(),
                     f.getMontoAnticipo(), f.getMetodoPago(), f.getTelefonoYape(), f.getCodigoOperacion(),
                     f.getTelefonoDevolucion(), auth.getName());
-            flash.addFlashAttribute("ok", "Reserva presencial creada y anticipo registrado como pagado.");
+            flash.addFlashAttribute("ok", f.getMetodoPago() == pe.edu.upt.autorent.modelo.MetodoPago.YAPE
+                    ? "Reserva registrada. Verifique el Yape en la cuenta de la empresa y confírmelo en la tabla de pagos."
+                    : "Reserva presencial creada y anticipo registrado como pagado.");
         } catch (IllegalArgumentException ex) {
             // Vuelve al formulario con los datos escritos, para no tener que llenarlo otra vez.
             flash.addFlashAttribute("error", ex.getMessage());

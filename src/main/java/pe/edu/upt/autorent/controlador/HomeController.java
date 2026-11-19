@@ -22,7 +22,7 @@ public class HomeController {
 
     /** Inicio con accesos rápidos según el rol y los vehículos disponibles. */
     @GetMapping("/inicio") public String inicio(Model model) {
-        model.addAttribute("autos", autos.listarDisponibles());
+        model.addAttribute("autos", autos.listarReservables());
         return "inicio";
     }
 

@@ -109,6 +109,49 @@ public class UsuarioService implements UsuarioUseCase {
                 u.documento(), u.correo(), u.telefono(), u.direccion(), u.rol(), activo));
     }
 
+    /**
+     * Corrige los datos personales de una cuenta. Quién puede editar a quién:
+     * - ADMIN: cualquier cuenta.
+     * - TRABAJADOR: solo clientes (los registra en sucursal y corrige sus errores al ver su DNI).
+     * - CLIENTE: solo su propia cuenta y solo correo, teléfono y dirección; su nombre y DNI son su identidad
+     *   (van en las boletas), así que esos los corrige el personal tras ver su documento.
+     * El usuario, la contraseña y el rol no se cambian aquí. Las boletas ya emitidas guardan su propia copia
+     * de los datos, por eso corregir una cuenta no altera comprobantes pasados.
+     */
+    @Override public Usuario actualizarDatos(Long id, String nombres, String apellidos, String documento,
+                                             String correo, String telefono, String direccion, String editor) {
+        Usuario u = obtener(id);
+        Usuario quien = usuarios.findByUsername(editor == null ? "" : editor)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+        boolean esSuPropiaCuenta = quien.id().equals(u.id());
+        switch (quien.rol()) {
+            case ADMIN -> { }
+            case TRABAJADOR -> {
+                if (u.rol() != Rol.CLIENTE && !esSuPropiaCuenta)
+                    throw new IllegalArgumentException("Solo puede corregir los datos de clientes.");
+            }
+            case CLIENTE -> {
+                if (!esSuPropiaCuenta) throw new IllegalArgumentException("Solo puede editar los datos de su propia cuenta.");
+                nombres = u.nombres(); apellidos = u.apellidos(); documento = u.documento();
+            }
+        }
+        nombres = limpiar(nombres); apellidos = limpiar(apellidos); documento = limpiar(documento);
+        correo = limpiar(correo).toLowerCase(); telefono = limpiar(telefono); direccion = limpiar(direccion);
+        if (nombres.length() > 80 || apellidos.length() > 80 || correo.length() > 120 || direccion.length() > 200)
+            throw new IllegalArgumentException("Uno de los campos supera el tamaño permitido.");
+        ValidacionDatos.nombre(nombres, "nombres");
+        ValidacionDatos.nombre(apellidos, "apellidos");
+        // El DNI se valida solo si cambia: así una cuenta antigua con un DNI que hoy no pasaría la regla
+        // puede corregir su correo o teléfono sin quedar bloqueada.
+        if (!documento.equals(u.documento())) ValidacionDatos.dni(documento);
+        ValidacionDatos.correo(correo);
+        ValidacionDatos.telefonoOpcional(telefono);
+        if (usuarios.existsByDocumentoAndIdNot(documento, u.id())) throw new IllegalArgumentException("Ese documento ya está registrado en otra cuenta.");
+        if (usuarios.existsByCorreoAndIdNot(correo, u.id())) throw new IllegalArgumentException("Ese correo ya está registrado en otra cuenta.");
+        return usuarios.save(new Usuario(u.id(), u.username(), u.passwordHash(), nombres, apellidos,
+                documento, correo, telefono, direccion, u.rol(), u.activo()));
+    }
+
     /** Convierte null en texto vacío y quita espacios sobrantes. */
     private String limpiar(String valor) { return valor == null ? "" : valor.trim(); }
 }

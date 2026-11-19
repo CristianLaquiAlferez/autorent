@@ -21,4 +21,7 @@ public interface UsuarioUseCase {
     Usuario obtener(Long id);
     /** Caso de uso: cambiar estado. */
     void cambiarEstado(Long id, boolean activo);
+    /** Corrige los datos personales de una cuenta; editor = usuario que hace el cambio (define qué puede tocar). */
+    Usuario actualizarDatos(Long id, String nombres, String apellidos, String documento,
+                            String correo, String telefono, String direccion, String editor);
 }

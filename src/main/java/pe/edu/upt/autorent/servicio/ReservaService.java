@@ -59,6 +59,7 @@ public class ReservaService implements ReservaUseCase {
     private final ApplicationEventPublisher eventos;
     private final BitacoraReservas bitacora;
     private final Clock reloj;
+    private final MantenimientoRepositoryPort mantenimientos;
     private final boolean payPalHabilitado;
     /** Horas que tiene el cliente para pagar el anticipo antes de que la reserva venza. */
     private final long horasParaPagar;
@@ -69,12 +70,13 @@ public class ReservaService implements ReservaUseCase {
                           ReservaRepositoryPort reservas, PagoRepositoryPort pagos,
                           DevolucionRepositoryPort devoluciones, ApplicationEventPublisher eventos,
                           BitacoraReservas bitacora, Clock reloj,
-                          PayPalPort payPal,
+                          PayPalPort payPal, MantenimientoRepositoryPort mantenimientos,
                           @Value("${autorent.reservas.horas-para-pagar:24}") long horasParaPagar,
                           @Value("${autorent.pagos.minutos-pago-en-linea:30}") long minutosPagoEnLinea) {
         this.autos = autos; this.usuarios = usuarios; this.reservas = reservas;
         this.pagos = pagos; this.devoluciones = devoluciones; this.eventos = eventos; this.bitacora = bitacora; this.reloj = reloj;
         this.payPalHabilitado = payPal != null && payPal.configurado();
+        this.mantenimientos = mantenimientos;
         this.horasParaPagar = horasParaPagar; this.minutosPagoEnLinea = minutosPagoEnLinea;
     }
 
@@ -164,8 +166,9 @@ public class ReservaService implements ReservaUseCase {
 
     /**
      * Registra una reserva desde el mostrador (la hace un trabajador).
-     * Como el trabajador recibe el dinero en persona, el anticipo queda CONFIRMADO
-     * y la reserva pasa directamente a CONFIRMADA.
+     * Efectivo: el trabajador recibe el dinero en la mano, así que el anticipo queda CONFIRMADO y la reserva CONFIRMADA.
+     * Yape: queda PENDIENTE como cualquier Yape (web o saldo). Se confirma al verlo en el Yape de la empresa,
+     * no en la pantalla del cliente, porque existen capturas y apps de "Yape falso".
      */
     @Override public Reserva crearReservaPresencial(Long clienteId, Long autoId, LocalDate inicio, LocalDate fin,
                                                      BigDecimal anticipo, MetodoPago metodo, String telefonoYape,
@@ -181,13 +184,21 @@ public class ReservaService implements ReservaUseCase {
         validarDatosPago(metodo, telefonoYape, codigoOperacion, metodo == MetodoPago.EFECTIVO, false);
         if (metodo == MetodoPago.EFECTIVO && !telefonoValido(telefonoDevolucion))
             throw new IllegalArgumentException("Registre un número móvil válido para la devolución de pagos en efectivo.");
-        reserva = reservas.save(reserva.conEstado(EstadoReserva.CONFIRMADA));
-        bitacora.anotar(reserva.id(), AccionReserva.CREADA, null, EstadoReserva.CONFIRMADA, trabajador,
+        boolean esYape = metodo == MetodoPago.YAPE;
+        EstadoReserva estadoInicial = esYape ? EstadoReserva.PENDIENTE_VALIDACION : EstadoReserva.CONFIRMADA;
+        reserva = reservas.save(reserva.conEstado(estadoInicial));
+        bitacora.anotar(reserva.id(), AccionReserva.CREADA, null, estadoInicial, trabajador,
                 "Reserva en mostrador: " + descripcionReserva(reserva));
-        Pago anticipoPagado = pagos.save(Pago.nuevo(reserva.id(), anticipo.setScale(2, RoundingMode.HALF_UP), metodo,
+        Pago anticipoRegistrado = Pago.nuevo(reserva.id(), anticipo.setScale(2, RoundingMode.HALF_UP), metodo,
                 TipoPago.ANTICIPO, EstadoPago.PENDIENTE, origenDelPago(metodo, telefonoYape, telefonoDevolucion),
-                codigoDelPago(metodo, codigoOperacion), ahora(), trabajador)
-                .procesado(EstadoPago.CONFIRMADO, ahora(), trabajador, "Recibido en mostrador"));
+                codigoDelPago(metodo, codigoOperacion), ahora(), trabajador);
+        if (esYape) {
+            Pago pendiente = pagos.save(anticipoRegistrado);
+            bitacora.anotar(reserva.id(), AccionReserva.PAGO_REGISTRADO, trabajador,
+                    pendiente.resumen() + " registrado en mostrador; se confirma al verlo en el Yape de la empresa");
+            return reserva;
+        }
+        Pago anticipoPagado = pagos.save(anticipoRegistrado.procesado(EstadoPago.CONFIRMADO, ahora(), trabajador, "Recibido en mostrador"));
         bitacora.anotar(reserva.id(), AccionReserva.PAGO_CONFIRMADO, trabajador, anticipoPagado.resumen() + " (recibido en mostrador)");
         eventos.publishEvent(new PagoConfirmadoEvento(anticipoPagado.id()));
         return reserva;
@@ -204,11 +215,15 @@ public class ReservaService implements ReservaUseCase {
         // Bloqueo pesimista (SELECT ... FOR UPDATE): evita que dos personas reserven el mismo auto a la vez.
         if (autoId == null) throw new IllegalArgumentException("Seleccione un vehículo.");
         Auto auto = autos.findByIdForUpdate(autoId).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
-        if (auto.estado() != EstadoAuto.DISPONIBLE) throw new IllegalArgumentException("El vehículo no está habilitado para reservas.");
+        // Un auto en el taller se puede reservar para después del mantenimiento; uno inactivo, nunca.
+        if (auto.estado() == EstadoAuto.INACTIVO) throw new IllegalArgumentException("El vehículo no está habilitado para reservas.");
         int dias = ReglasAlquiler.validarPeriodo(inicio, fin, hoy());
         // Un cruce existe si otra reserva activa ocupa alguno de los mismos días.
         if (reservas.existsCruce(autoId, inicio, fin, EstadoReserva.BLOQUEAN_DISPONIBILIDAD))
             throw new IllegalArgumentException("El vehículo ya tiene una reserva que se cruza con esas fechas.");
+        LocalDate hoy = hoy();
+        if (mantenimientos != null && mantenimientos.findByAutoId(autoId).stream().anyMatch(m -> m.choca(inicio, fin, hoy)))
+            throw new IllegalArgumentException("El vehículo estará en mantenimiento en esas fechas. Elija otras fechas u otro vehículo.");
         // Total = tarifa diaria x días, redondeado a 2 decimales (se usa BigDecimal para no perder céntimos).
         BigDecimal total = auto.tarifaDiaria().multiply(BigDecimal.valueOf(dias)).setScale(2, RoundingMode.HALF_UP);
         ReglasAlquiler.validarAnticipo(anticipo, total);

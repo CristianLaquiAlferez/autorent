@@ -29,7 +29,7 @@
 </label>
             <label class="full">Vehículo *<select th:field="*{autoId}" required>
 <option value="">Seleccione vehículo</option>
-<option th:each="a : ${autos}" th:value="${a.id}" th:attr="data-tarifa=${a.tarifaDiaria}" th:text="|${a.placa} - ${a.marca} ${a.modelo} - S/ ${a.tarifaDiaria}/día|">
+<option th:each="a : ${autos}" th:value="${a.id}" th:attr="data-tarifa=${a.tarifaDiaria}" th:text="|${a.placa} - ${a.marca} ${a.modelo} - S/ ${a.tarifaDiaria}/día${a.estado.name() == 'MANTENIMIENTO' ? ' (en taller: solo fechas posteriores)' : ''}|">
 </option>
 </select>
 </label>
@@ -49,6 +49,7 @@
 <strong>Yape receptor:</strong>
 <span th:text="${titularYape}">AutoRent</span> · <strong th:text="${yapeNegocio}">999000000</strong>
 <span th:if="${yapeNegocio == '999000000'}"> · Número de prueba; no realizar pagos.</span>
+<br>Con Yape, la reserva queda pendiente hasta que confirme el pago tras verlo en el Yape de la empresa (no en el celular del cliente).
 </div>
             <label>Número Yape<input th:field="*{telefonoYape}" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}" data-telefono-peru="movil" title="Ingrese 9 dígitos y comience con 9 (sin +51)">
 </label>

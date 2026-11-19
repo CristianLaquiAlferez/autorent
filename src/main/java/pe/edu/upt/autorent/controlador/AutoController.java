@@ -31,13 +31,16 @@ public class AutoController {
 
     /** Catálogo: muestra solo los vehículos DISPONIBLES. */
     @GetMapping("/autos") public String catalogo(Model model) {
-        model.addAttribute("autos", autos.listarDisponibles());
+        model.addAttribute("autos", autos.listarReservables());
         return "autos/catalogo";
     }
 
     /** Lista de todos los vehículos para el administrador. */
     @GetMapping("/admin/autos") public String administrar(Model model) {
         model.addAttribute("autos", autos.listarTodos());
+        // Días ocupados de cada auto: muestra ALQUILADO cuando está fuera y sus próximas reservas o mantenimientos.
+        model.addAttribute("ocupacion", autos.ocupacionDeLaFlota());
+        model.addAttribute("hoy", LocalDate.now());
         return "autos/administrar";
     }
 
@@ -151,14 +154,19 @@ public class AutoController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaInicio,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaFin,
             RedirectAttributes flash) {
-        try { autos.iniciarMantenimiento(autoId, descripcion, fechaInicio, fechaFin); flash.addFlashAttribute("ok", "Vehículo enviado a mantenimiento."); }
+        try {
+            autos.iniciarMantenimiento(autoId, descripcion, fechaInicio, fechaFin);
+            flash.addFlashAttribute("ok", fechaInicio != null && fechaInicio.isAfter(LocalDate.now())
+                    ? "Mantenimiento programado. El vehículo se sigue alquilando fuera de esas fechas y entra al taller el día de inicio."
+                    : "Vehículo enviado a mantenimiento.");
+        }
         catch (IllegalArgumentException ex) { flash.addFlashAttribute("error", ex.getMessage()); }
         return "redirect:/admin/mantenimiento";
     }
 
     /** Termina el mantenimiento y el vehículo vuelve a estar disponible. */
     @PostMapping("/admin/mantenimiento/{id}/finalizar") public String finalizarMantenimiento(@PathVariable Long id, RedirectAttributes flash) {
-        try { autos.finalizarMantenimiento(id); flash.addFlashAttribute("ok", "Mantenimiento finalizado. Vehículo disponible."); }
+        try { flash.addFlashAttribute("ok", autos.finalizarMantenimiento(id)); }
         catch (IllegalArgumentException ex) { flash.addFlashAttribute("error", ex.getMessage()); }
         return "redirect:/admin/mantenimiento";
     }

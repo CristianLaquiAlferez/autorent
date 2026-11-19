@@ -23,8 +23,8 @@
 <h2>Enviar vehículo a mantenimiento</h2>
 <form th:action="@{/admin/mantenimiento/iniciar}" method="post" class="form-grid">
         <label class="full">Vehículo *<select name="autoId" required>
-<option value="">Seleccione vehículo disponible</option>
-<option th:each="a : ${autos}" th:if="${a.estado.name() == 'DISPONIBLE'}" th:value="${a.id}" th:text="|${a.placa} - ${a.marca} ${a.modelo}|">
+<option value="">Seleccione vehículo</option>
+<option th:each="a : ${autos}" th:if="${a.estado.name() != 'INACTIVO'}" th:value="${a.id}" th:text="|${a.placa} - ${a.marca} ${a.modelo}${a.estado.name() == 'MANTENIMIENTO' ? ' (en taller)' : ''}|">
 </option>
 </select>
 </label>
@@ -34,6 +34,8 @@
 </label>
 <label>Fecha estimada de fin *<input type="date" name="fechaFin" required data-despues-de="mantInicio" data-dias-min="0" data-mensaje-fecha="El fin no puede ser antes del inicio.">
 </label>
+        <p class="full muted"><small>Si empieza hoy, el auto entra al taller de inmediato. Si empieza otro día, queda programado:
+el auto se sigue alquilando fuera de esas fechas y entra al taller automáticamente el día de inicio. No se permite si hay reservas en esas fechas.</small></p>
         <div class="full">
 <button class="btn primary" type="submit">Registrar mantenimiento</button>
 </div>
@@ -46,7 +48,7 @@
 <thead>
 <tr>
 <th>N.°</th>
-<th>Vehículo ID</th>
+<th>Vehículo</th>
 <th>Descripción</th>
 <th>Inicio</th>
 <th>Fin</th>
@@ -66,11 +68,14 @@
 </td>
 <td th:text="${m.fechaFin == null ? 'Pendiente' : m.fechaFin}">
 </td>
-<td th:text="${m.estado}">
+<td th:text="${m.estado.name() == 'PROGRAMADO' ? 'PROGRAMADO' : (m.estado.name() == 'EN_PROCESO' ? 'EN TALLER' : 'FINALIZADO')}">
 </td>
 <td>
 <form th:if="${m.estado.name() == 'EN_PROCESO'}" th:action="@{/admin/mantenimiento/{id}/finalizar(id=${m.id})}" method="post">
 <button class="btn small primary" type="submit">Finalizar</button>
+</form>
+<form th:if="${m.estado.name() == 'PROGRAMADO'}" th:action="@{/admin/mantenimiento/{id}/finalizar(id=${m.id})}" method="post">
+<button class="btn small secondary" type="submit">Cancelar</button>
 </form>
 </td>
 </tr>

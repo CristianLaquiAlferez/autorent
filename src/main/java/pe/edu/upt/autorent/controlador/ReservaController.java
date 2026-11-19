@@ -68,8 +68,9 @@ public class ReservaController {
         Auto auto;
         try { auto = autos.obtener(autoId); }
         catch (IllegalArgumentException ex) { flash.addFlashAttribute("error", ex.getMessage()); return "redirect:/autos"; }
-        // Un vehículo inactivo o en mantenimiento no se ofrece aunque se escriba su dirección a mano.
-        if (auto.estado() != EstadoAuto.DISPONIBLE) {
+        // Un vehículo inactivo no se ofrece aunque se escriba su dirección a mano.
+        // Uno en el taller sí: se puede reservar para después del mantenimiento.
+        if (auto.estado() == EstadoAuto.INACTIVO) {
             flash.addFlashAttribute("error", "El vehículo no está habilitado para reservas.");
             return "redirect:/autos";
         }
@@ -77,6 +78,8 @@ public class ReservaController {
         ReservaForm form = model.containsAttribute("form") ? (ReservaForm) model.getAttribute("form") : new ReservaForm();
         form.setAutoId(autoId);
         model.addAttribute("auto", auto); model.addAttribute("form", form);
+        // Días en que este auto ya está ocupado: se muestran y el navegador no deja elegirlos.
+        model.addAttribute("ocupado", autos.fechasOcupadas(autoId));
         model.addAttribute("metodos", metodosDisponibles());
         LocalDate hoy = LocalDate.now();
         model.addAttribute("fechaMinima", hoy); // no se puede reservar en fechas pasadas

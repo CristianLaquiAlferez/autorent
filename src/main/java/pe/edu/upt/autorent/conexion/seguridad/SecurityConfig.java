@@ -32,7 +32,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/autos/*/imagen", "/autos/*/ilustracion.svg").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/operaciones/**", "/reportes", "/reportes/**").hasAnyRole("ADMIN", "TRABAJADOR")
-                .requestMatchers("/reservas/**", "/mis-reservas", "/mis-reservas/**", "/pagos/**").hasRole("CLIENTE")
+                .requestMatchers("/reservas/**", "/mis-reservas", "/mis-reservas/**", "/pagos/**", "/mi-cuenta").hasRole("CLIENTE")
                 .requestMatchers("/inicio").authenticated()
                 .anyRequest().authenticated())
             .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/inicio", true).permitAll())

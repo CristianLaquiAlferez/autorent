@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!-- Sucursal: lista de clientes para buscarlos y corregir sus datos. -->
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clientes | AutoRent</title>
+<link rel="stylesheet" th:href="@{/css/app.css}">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}">
+</div>
+<main class="container">
+    <div th:replace="~{fragments/alerts :: alerts}">
+</div>
+<div class="section-head">
+<div>
+<p class="eyebrow">SUCURSAL</p>
+<h1>Clientes</h1>
+</div>
+<a class="btn primary" th:href="@{/operaciones/clientes/nuevo}">+ Registrar cliente</a>
+</div>
+<section class="panel">
+<label>Buscar<input id="buscarCliente" placeholder="Nombre, DNI, usuario o correo" autocomplete="off"></label>
+<div class="table-wrap">
+<table id="tablaClientes">
+<thead>
+<tr>
+<th>Usuario</th>
+<th>Nombre</th>
+<th>DNI</th>
+<th>Correo</th>
+<th>Teléfono</th>
+<th>Estado</th>
+<th>Acción</th>
+</tr>
+</thead>
+<tbody>
+<tr th:each="c : ${clientes}">
+<td th:text="${c.username}"></td>
+<td th:text="|${c.nombres} ${c.apellidos}|"></td>
+<td th:text="${c.documento}"></td>
+<td th:text="${c.correo}"></td>
+<td th:text="${c.telefono}"></td>
+<td th:text="${c.activo ? 'ACTIVO' : 'INACTIVO'}"></td>
+<td><a class="btn small outline" th:href="@{/operaciones/clientes/{id}/editar(id=${c.id})}">Editar datos</a></td>
+</tr>
+<tr th:if="${#lists.isEmpty(clientes)}">
+<td colspan="7" class="center muted">No hay clientes registrados.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+<script>
+(function(){
+ const buscar=document.getElementById('buscarCliente');
+ const filas=[...document.querySelectorAll('#tablaClientes tbody tr')];
+ buscar.addEventListener('input',()=>{const t=buscar.value.trim().toLowerCase();
+   filas.forEach(f=>{f.hidden=t!==''&&!f.innerText.toLowerCase().includes(t);});});
+})();
+</script>
+</body>
+</html>

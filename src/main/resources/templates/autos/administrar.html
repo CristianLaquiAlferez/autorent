@@ -29,6 +29,7 @@
 <th>Categoría</th>
 <th>Tarifa diaria</th>
 <th>Estado</th>
+<th>Días ocupados</th>
 <th>Acciones</th>
 </tr>
 </thead>
@@ -47,9 +48,24 @@
 </td>
 <td th:text="|S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)}|">
 </td>
-<td>
-<span class="status" th:text="${auto.estado}" th:classappend="${auto.estado.name() == 'DISPONIBLE' ? 'green' : (auto.estado.name() == 'MANTENIMIENTO' ? 'orange' : 'gray')}">
+<td th:with="periodos=${ocupacion[auto.id]}, fuera=${periodos != null and !periodos.?[enCurso()].isEmpty() ? periodos.?[enCurso()][0] : null}">
+<!-- Si el auto está habilitado pero ahora mismo está fuera, se muestra ALQUILADO y cuándo vuelve. -->
+<th:block th:if="${fuera != null and auto.estado.name() == 'DISPONIBLE'}">
+<span class="status orange">ALQUILADO</span>
+<br><small th:class="${fuera.atrasado(hoy) ? 'text-danger' : 'muted'}" th:text="${fuera.atrasado(hoy) ? '¡Atrasado! Debía volver el ' + fuera.finTexto() : 'Vuelve el ' + fuera.finTexto()}">Vuelve el 20/11/2026</small>
+</th:block>
+<span th:unless="${fuera != null and auto.estado.name() == 'DISPONIBLE'}" class="status" th:text="${auto.estado.name() == 'MANTENIMIENTO' ? 'EN TALLER' : auto.estado}" th:classappend="${auto.estado.name() == 'DISPONIBLE' ? 'green' : (auto.estado.name() == 'MANTENIMIENTO' ? 'orange' : 'gray')}">
 </span>
+</td>
+<td th:with="periodos=${ocupacion[auto.id]}">
+<span th:if="${periodos == null or periodos.isEmpty()}" class="muted">Libre</span>
+<ul class="lista-compacta" th:unless="${periodos == null or periodos.isEmpty()}">
+<li th:each="p, it : ${periodos}" th:if="${it.index < 4}">
+<span th:text="${p.texto()}">25/11/2026 al 27/11/2026</span>
+<small class="muted" th:text="|(${p.etiqueta()})|">(reservado)</small>
+</li>
+<li th:if="${periodos.size() > 4}" class="muted" th:text="|y ${periodos.size() - 4} más|">y 2 más</li>
+</ul>
 </td>
         <td class="actions">
 <a class="btn small outline" th:href="@{/admin/autos/{id}/editar(id=${auto.id})}">Editar</a>

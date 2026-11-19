@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ReservaServiceConsultasTest {
 
     private final ReservaService servicio = new ReservaService(null, null, null, null, null, null, null,
-            java.time.Clock.systemDefaultZone(), null, 24, 30);
+            java.time.Clock.systemDefaultZone(), null, null, 24, 30);
 
     private static Reserva reserva(long id, EstadoReserva estado, LocalDate inicio, String total) {
         return new Reserva(id, null, null, inicio, inicio.plusDays(3), 3, new BigDecimal("100.00"),

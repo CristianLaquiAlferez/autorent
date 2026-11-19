@@ -1,7 +1,15 @@
 package pe.edu.upt.autorent.controlador.formulario;
-/** Datos de entrada para registrar clientes. */
+/** Datos de entrada para registrar clientes o corregir los datos de una cuenta. */
 
 public class RegistroForm {
+    /** Formulario lleno con los datos actuales de la cuenta (para editarla). La contraseña nunca se copia. */
+    public static RegistroForm de(pe.edu.upt.autorent.modelo.Usuario u) {
+        RegistroForm f = new RegistroForm();
+        f.setUsername(u.username()); f.setNombres(u.nombres()); f.setApellidos(u.apellidos());
+        f.setDocumento(u.documento()); f.setCorreo(u.correo()); f.setTelefono(u.telefono()); f.setDireccion(u.direccion());
+        return f;
+    }
+
     private String username;
     private String password;
     private String nombres;

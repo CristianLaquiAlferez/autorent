@@ -282,15 +282,73 @@ class FlujosDeNegocioTest {
     }
 
     @Test
-    void elMantenimientoSoloChocaConReservasDeEsasFechasYBloqueaLaEntrega() {
+    void elMantenimientoProgramadoRespetaSusFechasYEntraAlTallerCuandoVuelveElAuto() {
         Usuario c = nuevoCliente(); Auto a = nuevoAuto();
         Reserva r = reservas.crearReservaPresencial(c.id(), a.id(), hoy(), hoy().plusDays(1),
                 new BigDecimal("100.00"), MetodoPago.EFECTIVO, null, null, "999111222", "trabajador");
+        // Hoy no: el auto sale hoy en ese alquiler.
         assertThrows(IllegalArgumentException.class,
                 () -> autos.iniciarMantenimiento(a.id(), "Cambio de aceite", hoy(), hoy()));
-        autos.iniciarMantenimiento(a.id(), "Cambio de aceite", hoy().plusDays(1), hoy().plusDays(1));
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", "45000 km, tanque lleno"));
-        assertTrue(ex.getMessage().contains("mantenimiento"));
+        // Desde mañana (el día en que vuelve) sí: queda PROGRAMADO y el auto sigue disponible hoy.
+        autos.iniciarMantenimiento(a.id(), "Cambio de aceite", hoy().plusDays(1), hoy().plusDays(2));
+        assertEquals(EstadoAuto.DISPONIBLE, autos.obtener(a.id()).estado());
+        assertTrue(autos.fechasOcupadas(a.id()).stream().anyMatch(PeriodoOcupado::mantenimiento));
+        // Nadie puede reservar los días del taller, ni otro mantenimiento encima.
+        Usuario c2 = nuevoCliente();
+        IllegalArgumentException choque = assertThrows(IllegalArgumentException.class, () -> reservas.crearReservaPresencial(
+                c2.id(), a.id(), hoy().plusDays(2), hoy().plusDays(3), new BigDecimal("100.00"), MetodoPago.EFECTIVO, null, null, "999111222", "trabajador"));
+        assertTrue(choque.getMessage().contains("mantenimiento"));
+        assertThrows(IllegalArgumentException.class,
+                () -> autos.iniciarMantenimiento(a.id(), "Revisión de frenos", hoy().plusDays(2), hoy().plusDays(4)));
+        // La entrega de hoy sí se hace: programar el taller para mañana ya no bloquea el auto desde hoy.
+        reservas.entregarVehiculo(r.id(), "trabajador", "45000 km, tanque lleno");
+        // Llega el día de inicio con el auto todavía fuera: el taller espera.
+        reloj.avanzar(Duration.ofDays(1));
+        autos.activarMantenimientosProgramados();
+        assertEquals(EstadoAuto.DISPONIBLE, autos.obtener(a.id()).estado());
+        // El auto vuelve y entra al taller en la siguiente revisión automática.
+        reservas.recibirVehiculo(r.id(), "trabajador", "45100 km, tanque lleno, sin daños", null, null);
+        assertTrue(autos.activarMantenimientosProgramados() >= 1);
+        assertEquals(EstadoAuto.MANTENIMIENTO, autos.obtener(a.id()).estado());
+        // Mientras está en el taller se puede reservar para después del mantenimiento.
+        Reserva despues = reservas.crearReservaPresencial(c2.id(), a.id(), hoy().plusDays(2), hoy().plusDays(3),
+                new BigDecimal("100.00"), MetodoPago.EFECTIVO, null, null, "999111222", "trabajador");
+        assertNotNull(despues.id());
+        Long enTaller = autos.listarMantenimientos().stream()
+                .filter(m -> m.autoId().equals(a.id()) && m.estado() == EstadoMantenimiento.EN_PROCESO).findFirst().orElseThrow().id();
+        assertEquals("Mantenimiento finalizado. Vehículo disponible.", autos.finalizarMantenimiento(enTaller));
+        assertEquals(EstadoAuto.DISPONIBLE, autos.obtener(a.id()).estado());
+    }
+
+    @Test
+    void elPersonalLiberaUnaReservaConYapeSinValidarCuandoPasoSuInicio() {
+        Usuario c = nuevoCliente(); Auto a = nuevoAuto();
+        Reserva r = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(1), hoy().plusDays(2),
+                new BigDecimal("40.00"), MetodoPago.YAPE, "999111222", "YAPE-VENCE-" + a.id(), null);
+        // Antes del inicio no se puede liberar.
+        assertThrows(IllegalArgumentException.class, () -> reservas.vencerReservaSinPago(r.id(), "trabajador"));
+        reloj.avanzar(Duration.ofDays(2));
+        // La tarea automática no toca un Yape por validar (el cliente pudo haber pagado): decide el personal.
+        reservas.vencerReservasSinPago();
+        assertEquals(EstadoReserva.PENDIENTE_VALIDACION, reservas.obtenerReserva(r.id()).estado());
+        reservas.vencerReservaSinPago(r.id(), "trabajador");
+        assertEquals(EstadoReserva.VENCIDA, reservas.obtenerReserva(r.id()).estado());
+        assertTrue(pagos.findByReservaId(r.id()).stream().allMatch(p -> p.estado() == EstadoPago.RECHAZADO));
+        assertTrue(autos.fechasOcupadas(a.id()).isEmpty());
+    }
+
+    @Test
+    void unMantenimientoProgramadoSePuedeCancelarYLiberaSusFechas() {
+        Auto a = nuevoAuto();
+        autos.iniciarMantenimiento(a.id(), "Cambio de llantas", hoy().plusDays(10), hoy().plusDays(11));
+        Long programado = autos.listarMantenimientos().stream()
+                .filter(m -> m.autoId().equals(a.id()) && m.estado() == EstadoMantenimiento.PROGRAMADO).findFirst().orElseThrow().id();
+        assertTrue(autos.finalizarMantenimiento(programado).startsWith("Mantenimiento programado cancelado"));
+        assertTrue(autos.fechasOcupadas(a.id()).isEmpty());
+        Usuario c = nuevoCliente();
+        assertNotNull(reservas.crearReservaPresencial(c.id(), a.id(), hoy().plusDays(10), hoy().plusDays(11),
+                new BigDecimal("100.00"), MetodoPago.EFECTIVO, null, null, "999111222", "trabajador").id());
+        assertEquals(1, autos.fechasOcupadas(a.id()).size());
     }
 
     @Test

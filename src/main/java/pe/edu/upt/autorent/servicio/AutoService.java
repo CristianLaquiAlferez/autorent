@@ -15,7 +15,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.net.URI;
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 /**
  * Servicio de negocio de vehículos: registro y edición, fotos, cambio de estado y mantenimiento.
  * Implementa el puerto de entrada AutoUseCase y usa solo puertos de salida (repositorio).
@@ -39,6 +43,46 @@ public class AutoService implements AutoUseCase {
     // Consultas de solo lectura (readOnly = true): no modifican la base de datos.
     @Override @Transactional(readOnly = true) public List<Auto> listarTodos() { return autos.findAll(); }
     @Override @Transactional(readOnly = true) public List<Auto> listarDisponibles() { return autos.findByEstado(EstadoAuto.DISPONIBLE); }
+
+    /**
+     * Autos que se pueden reservar: los disponibles y los que están en el taller (se reservan para
+     * después del mantenimiento). Los inactivos no se ofrecen.
+     */
+    @Override @Transactional(readOnly = true) public List<Auto> listarReservables() {
+        return autos.findAll().stream().filter(a -> a.estado() != EstadoAuto.INACTIVO).toList();
+    }
+
+    /**
+     * Días en que el auto ya está comprometido, de hoy en adelante, ordenados por fecha:
+     * reservas activas, alquiler en curso (aunque esté atrasado) y mantenimientos programados o en el taller.
+     */
+    @Override @Transactional(readOnly = true) public List<PeriodoOcupado> fechasOcupadas(Long autoId) {
+        LocalDate hoy = LocalDate.now(reloj);
+        List<PeriodoOcupado> periodos = new ArrayList<>();
+        for (Reserva r : reservas.findByAutoId(autoId)) {
+            if (!EstadoReserva.BLOQUEAN_DISPONIBILIDAD.contains(r.estado())) continue;
+            if (r.estado() != EstadoReserva.EN_CURSO && r.fechaFin().isBefore(hoy)) continue;
+            periodos.add(PeriodoOcupado.deReserva(r));
+        }
+        for (Mantenimiento m : mantenimientos.findByAutoId(autoId)) {
+            if (m.estado().ocupaElAuto() && !m.ultimoDiaOcupado(hoy).isBefore(hoy)) periodos.add(PeriodoOcupado.deMantenimiento(m, hoy));
+        }
+        periodos.sort(Comparator.comparing(PeriodoOcupado::inicio));
+        return periodos;
+    }
+
+    /** Ocupación de toda la flota, para la lista del administrador. */
+    @Override @Transactional(readOnly = true) public Map<Long, List<PeriodoOcupado>> ocupacionDeLaFlota() {
+        Map<Long, List<PeriodoOcupado>> ocupacion = new LinkedHashMap<>();
+        for (Auto a : autos.findAll()) ocupacion.put(a.id(), fechasOcupadas(a.id()));
+        return ocupacion;
+    }
+
+    /** ¿Algún mantenimiento activo del auto choca con esos días? (finExclusivo = día en que el auto quedaría libre). */
+    private boolean chocaConMantenimiento(Long autoId, LocalDate inicio, LocalDate finExclusivo) {
+        LocalDate hoy = LocalDate.now(reloj);
+        return mantenimientos.findByAutoId(autoId).stream().anyMatch(m -> m.choca(inicio, finExclusivo, hoy));
+    }
     @Override @Transactional(readOnly = true) public Auto obtener(Long id) {
         return autos.findById(id).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
     }
@@ -187,38 +231,79 @@ public class AutoService implements AutoUseCase {
     @Override @Transactional(readOnly = true) public List<Mantenimiento> listarMantenimientos() { return mantenimientos.findAll(); }
 
     /**
-     * Envía un vehículo disponible al taller: se registra el mantenimiento y el auto deja de poder reservarse.
-     * Solo se impide si el auto está alquilado ahora o si alguna reserva activa cae dentro de las fechas
-     * del mantenimiento; una reserva para después del taller no se ve afectada (la entrega exige que el
-     * mantenimiento esté finalizado).
+     * Registra un mantenimiento con sus fechas.
+     * - Si empieza hoy, el auto entra al taller (estado MANTENIMIENTO) y deja de entregarse hasta que se finalice.
+     * - Si empieza después, queda PROGRAMADO: el auto se sigue alquilando fuera de esas fechas y la tarea
+     *   automática lo pasa al taller el día de inicio (si en ese momento ya volvió a la sucursal).
+     * No se permite si alguna reserva activa o alquiler en curso cae en esas fechas, ni si choca con otro mantenimiento.
      */
     @Override public void iniciarMantenimiento(Long autoId, String descripcion, LocalDate inicio, LocalDate fin) {
+        if (autoId == null) throw new IllegalArgumentException("Seleccione el vehículo.");
         Auto auto = autos.findByIdForUpdate(autoId).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
-        if (auto.estado() != EstadoAuto.DISPONIBLE) throw new IllegalArgumentException("Solo se puede enviar a mantenimiento un vehículo disponible.");
+        if (auto.estado() == EstadoAuto.INACTIVO) throw new IllegalArgumentException("El vehículo está inactivo. Actívelo antes de programar un mantenimiento.");
         ValidacionDatos.textoExplicativo(descripcion, "Describa el trabajo de mantenimiento (al menos 5 caracteres, por ejemplo: cambio de aceite).");
+        LocalDate hoy = LocalDate.now(reloj);
         if (inicio == null || fin == null) throw new IllegalArgumentException("Indique la fecha de inicio y de fin del mantenimiento.");
-        if (inicio.isBefore(LocalDate.now(reloj))) throw new IllegalArgumentException("El mantenimiento no puede empezar en una fecha pasada.");
+        if (inicio.isBefore(hoy)) throw new IllegalArgumentException("El mantenimiento no puede empezar en una fecha pasada.");
         if (fin.isBefore(inicio)) throw new IllegalArgumentException("La fecha de fin del mantenimiento no puede ser anterior a la de inicio.");
-        if (reservas.existsReservaActiva(autoId, List.of(EstadoReserva.EN_CURSO)))
+        boolean empiezaHoy = inicio.isEqual(hoy);
+        if (empiezaHoy && auto.estado() == EstadoAuto.MANTENIMIENTO)
+            throw new IllegalArgumentException("El vehículo ya está en el taller. Finalice ese mantenimiento primero.");
+        if (empiezaHoy && reservas.existsReservaActiva(autoId, List.of(EstadoReserva.EN_CURSO)))
             throw new IllegalArgumentException("No se puede enviar a mantenimiento: el vehículo está alquilado en este momento.");
         // El mantenimiento ocupa del inicio al fin, ambos incluidos: equivale al periodo [inicio, fin + 1).
         if (reservas.existsCruce(autoId, inicio, fin.plusDays(1), EstadoReserva.BLOQUEAN_DISPONIBILIDAD))
             throw new IllegalArgumentException("No se puede enviar a mantenimiento: hay reservas activas en esas fechas. Reprográmelas o elija otras fechas.");
+        if (chocaConMantenimiento(autoId, inicio, fin.plusDays(1)))
+            throw new IllegalArgumentException("Ya hay un mantenimiento de este vehículo en esas fechas.");
         mantenimientos.save(new Mantenimiento(null, autoId, descripcion.trim(), inicio, fin,
-                EstadoMantenimiento.EN_PROCESO, LocalDateTime.now(reloj)));
-        autos.save(new Auto(auto.id(), auto.placa(), auto.marca(), auto.modelo(), auto.anio(), auto.categoria(),
-                auto.color(), auto.tarifaDiaria(), auto.descripcion(), EstadoAuto.MANTENIMIENTO, auto.imagenUrl()));
+                empiezaHoy ? EstadoMantenimiento.EN_PROCESO : EstadoMantenimiento.PROGRAMADO, LocalDateTime.now(reloj)));
+        if (empiezaHoy) cambiarEstadoInterno(auto, EstadoAuto.MANTENIMIENTO);
     }
 
-    /** Cierra el mantenimiento y el vehículo vuelve a estar DISPONIBLE. */
-    @Override public void finalizarMantenimiento(Long mantenimientoId) {
+    /**
+     * Tarea automática: los mantenimientos programados cuyo día de inicio llegó pasan al taller.
+     * Si el auto todavía no volvió de un alquiler, se espera a la siguiente revisión.
+     */
+    @Override public int activarMantenimientosProgramados() {
+        LocalDate hoy = LocalDate.now(reloj);
+        int activados = 0;
+        for (Mantenimiento m : mantenimientos.findAll()) {
+            if (m.estado() != EstadoMantenimiento.PROGRAMADO || m.fechaInicio().isAfter(hoy)) continue;
+            if (reservas.existsReservaActiva(m.autoId(), List.of(EstadoReserva.EN_CURSO))) continue;
+            Auto a = autos.findByIdForUpdate(m.autoId()).orElse(null);
+            if (a == null || a.estado() == EstadoAuto.INACTIVO) continue;
+            mantenimientos.save(new Mantenimiento(m.id(), m.autoId(), m.descripcion(), m.fechaInicio(), m.fechaFin(),
+                    EstadoMantenimiento.EN_PROCESO, m.registradoEn()));
+            cambiarEstadoInterno(a, EstadoAuto.MANTENIMIENTO);
+            activados++;
+        }
+        return activados;
+    }
+
+    private void cambiarEstadoInterno(Auto a, EstadoAuto estado) {
+        autos.save(new Auto(a.id(), a.placa(), a.marca(), a.modelo(), a.anio(), a.categoria(),
+                a.color(), a.tarifaDiaria(), a.descripcion(), estado, a.imagenUrl()));
+    }
+
+    /**
+     * Cierra el mantenimiento. Uno en el taller termina hoy y el vehículo vuelve a estar DISPONIBLE;
+     * uno programado que todavía no empezó se cancela y libera sus fechas. Devuelve el mensaje para el usuario.
+     */
+    @Override public String finalizarMantenimiento(Long mantenimientoId) {
         Mantenimiento m = mantenimientos.findById(mantenimientoId)
                 .orElseThrow(() -> new IllegalArgumentException("Mantenimiento no encontrado."));
+        if (m.estado() == EstadoMantenimiento.PROGRAMADO) {
+            mantenimientos.save(new Mantenimiento(m.id(), m.autoId(), m.descripcion() + " (cancelado antes de empezar)",
+                    m.fechaInicio(), m.fechaFin(), EstadoMantenimiento.FINALIZADO, m.registradoEn()));
+            return "Mantenimiento programado cancelado. Sus fechas quedan libres para reservas.";
+        }
         if (m.estado() != EstadoMantenimiento.EN_PROCESO) throw new IllegalArgumentException("El mantenimiento ya fue finalizado.");
         mantenimientos.save(new Mantenimiento(m.id(), m.autoId(), m.descripcion(), m.fechaInicio(),
                 LocalDate.now(reloj), EstadoMantenimiento.FINALIZADO, m.registradoEn()));
         Auto a = autos.findByIdForUpdate(m.autoId()).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
-        autos.save(new Auto(a.id(), a.placa(), a.marca(), a.modelo(), a.anio(), a.categoria(),
-                a.color(), a.tarifaDiaria(), a.descripcion(), EstadoAuto.DISPONIBLE, a.imagenUrl()));
+        // Si el auto ya fue desactivado mientras estaba en el taller, sigue inactivo.
+        if (a.estado() == EstadoAuto.MANTENIMIENTO) cambiarEstadoInterno(a, EstadoAuto.DISPONIBLE);
+        return "Mantenimiento finalizado. Vehículo disponible.";
     }
 }

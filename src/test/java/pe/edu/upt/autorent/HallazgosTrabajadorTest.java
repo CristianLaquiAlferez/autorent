@@ -71,6 +71,21 @@ class HallazgosTrabajadorTest {
     }
 
     @Test
+    void elYapeEnSucursalQuedaPendienteHastaVerificarlo() {
+        LocalDate inicio = LocalDate.now().plusDays(40);
+        Long clienteId = usuarios.buscarPorUsername("cliente").orElseThrow().id();
+        var auto = autos.listarDisponibles().get(0);
+        var r = reservas.crearReservaPresencial(clienteId, auto.id(), inicio, inicio.plusDays(1), auto.tarifaDiaria(),
+                MetodoPago.YAPE, "987654321", "YAPE-SUC-01", null, "trabajador");
+        assertEquals(pe.edu.upt.autorent.modelo.EstadoReserva.PENDIENTE_VALIDACION, r.estado());
+        var yape = reservas.listarPagosDeCliente("cliente").stream()
+                .filter(p -> p.reservaId().equals(r.id())).findFirst().orElseThrow();
+        assertEquals(pe.edu.upt.autorent.modelo.EstadoPago.PENDIENTE, yape.estado());
+        reservas.confirmarPago(yape.id(), "trabajador");
+        assertEquals(pe.edu.upt.autorent.modelo.EstadoReserva.CONFIRMADA, reservas.obtenerReserva(r.id()).estado());
+    }
+
+    @Test
     void unFormularioEnviadoAUnaRutaDeOtroRolMuestraAccesoDenegado() throws Exception {
         mvc.perform(post("/admin/autos/1/estado").param("estado", "INACTIVO").with(csrf()).with(user("trabajador").roles("TRABAJADOR")))
                 .andExpect(status().isForbidden())

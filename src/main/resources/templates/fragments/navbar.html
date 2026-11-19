@@ -8,7 +8,9 @@
         <a th:href="@{/autos}">Vehículos</a>
         <a sec:authorize="isAuthenticated()" th:href="@{/inicio}">Inicio</a>
         <a sec:authorize="hasRole('CLIENTE')" th:href="@{/mis-reservas}">Mis reservas</a>
+        <a sec:authorize="hasRole('CLIENTE')" th:href="@{/mi-cuenta}">Mis datos</a>
         <a sec:authorize="hasAnyRole('ADMIN','TRABAJADOR')" th:href="@{/operaciones/reservas}">Operaciones</a>
+        <a sec:authorize="hasAnyRole('ADMIN','TRABAJADOR')" th:href="@{/operaciones/clientes}">Clientes</a>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/autos}">Autos</a>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/mantenimiento}">Mantenimiento</a>
         <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/usuarios}">Usuarios</a>

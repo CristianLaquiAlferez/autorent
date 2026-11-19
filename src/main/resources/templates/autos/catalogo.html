@@ -29,6 +29,7 @@
 <p class="muted" th:text="|${auto.categoria} · ${auto.anio} · ${auto.color}|">Sedán</p>
             <p th:text="${auto.descripcion}">Descripción del vehículo</p>
 <p class="price" th:text="|S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)} / día|">S/ 150.00 / día</p>
+            <p class="muted" th:if="${auto.estado.name() == 'MANTENIMIENTO'}"><small>En mantenimiento: puede reservarlo para fechas posteriores.</small></p>
             <a class="btn primary" sec:authorize="hasRole('CLIENTE')" th:href="@{/reservas/nueva/{id}(id=${auto.id})}">Reservar</a>
             <a class="btn outline" sec:authorize="isAnonymous()" th:href="@{/login}">Ingresar para reservar</a>
             

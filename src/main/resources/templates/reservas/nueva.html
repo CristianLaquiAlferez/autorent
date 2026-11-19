@@ -20,13 +20,23 @@
 <h1 th:text="|${auto.marca} ${auto.modelo}|">Vehículo</h1>
         <p class="muted" th:text="|${auto.placa} · S/ ${#numbers.formatDecimal(auto.tarifaDiaria,1,2)} por día|">Placa y tarifa</p>
         <img th:src="${auto.imagenUrl != null} ? ${auto.imagenUrl} : @{/autos/{id}/ilustracion.svg(id=${auto.id})}" th:data-respaldo="@{/autos/{id}/ilustracion.svg(id=${auto.id})}" onerror="if(this.src.indexOf('ilustracion')<0){this.src=this.dataset.respaldo}" class="reserva-foto" th:alt="|${auto.marca} ${auto.modelo} ${auto.color}|">
-        <form th:action="@{/reservas/crear}" th:object="${form}" method="post" class="form-grid" id="reservaForm" th:data-tarifa="${auto.tarifaDiaria}">
+        <div class="notice ocupado-aviso" th:if="${!#lists.isEmpty(ocupado)}">
+<strong>Días en que este vehículo ya está ocupado:</strong>
+<ul>
+<li th:each="p : ${ocupado}"><span th:text="${p.texto()}">25/11/2026 al 27/11/2026</span> <small class="muted" th:text="|(${p.etiqueta()})|">(reservado)</small></li>
+</ul>
+<small>El día de devolución de una reserva el auto vuelve y puede salir de nuevo.</small>
+</div>
+        <p class="muted" th:if="${#lists.isEmpty(ocupado)}">Este vehículo no tiene días ocupados: puede elegir cualquier fecha permitida.</p>
+        <form th:action="@{/reservas/crear}" th:object="${form}" method="post" class="form-grid" id="reservaForm" th:data-tarifa="${auto.tarifaDiaria}"
+              th:data-ocupado="${#strings.listJoin(ocupado.![inicio.toString() + '|' + finLibre.toString()], ';')}">
             <input type="hidden" th:field="*{autoId}">
             <label>Fecha de recojo *<input th:field="*{fechaInicio}" type="date" th:attr="min=${fechaMinima},max=${fechaMaxima}" required>
 </label>
             <label>Fecha de devolución *<input th:field="*{fechaFin}" type="date" required data-despues-de="fechaInicio" data-dias-min="1" data-dias-max="30" data-mensaje-fecha="La devolución es de 1 a 30 días después del recojo.">
 <small th:text="|Máximo ${maximoDias} días de alquiler.|">Máximo 30 días.</small>
 </label>
+            <div class="full notice text-danger" id="avisoCruce" hidden></div>
             <div class="full notice" id="calculoAlquiler">Seleccione las fechas para calcular el total y el anticipo mínimo.</div>
             <label>Anticipo (S/) *<input th:field="*{montoAnticipo}" type="number" min="0.01" step="0.01" required title="Entre el 20 % y el 100 % del total">
 <small>Mínimo 20% del total.</small>
@@ -81,6 +91,20 @@ La reserva se confirma en cuanto el pago sea aprobado y recibirá su boleta elec
    salida.textContent='Duración: '+dias+' día(s). Total estimado: S/ '+total.toFixed(2)+'. Anticipo mínimo (20%): S/ '+minimo.toFixed(2)+'.';
  }
  inicio.addEventListener('change',calcular); fin.addEventListener('change',calcular); calcular();
+ // Días ya ocupados del auto: si las fechas elegidas se cruzan, se avisa antes de enviar (el servidor lo vuelve a revisar).
+ const ocupado=(form.dataset.ocupado||'').split(';').filter(Boolean).map(t=>t.split('|'));
+ const aviso=document.getElementById('avisoCruce');
+ function revisarCruce(){
+   let mensaje='';
+   if(inicio.value&&fin.value){
+     const choque=ocupado.find(([desde,libre])=>inicio.value<libre&&fin.value>desde);
+     if(choque){const [a,m,d]=choque[0].split('-');mensaje='El vehículo ya está ocupado en esas fechas (desde el '+d+'/'+m+'/'+a+'). Elija otras fechas.';}
+   }
+   aviso.textContent=mensaje; aviso.hidden=!mensaje;
+   return !mensaje;
+ }
+ inicio.addEventListener('change',revisarCruce); fin.addEventListener('change',revisarCruce);
+ form.addEventListener('submit',e=>{ if(!revisarCruce()){ e.preventDefault(); aviso.scrollIntoView({block:'center'}); inicio.focus(); } });
  // Muestra solo los campos que corresponden al método elegido.
  const metodo=document.getElementById('metodoPago');
  function mostrarCampos(){
