@@ -5,6 +5,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import pe.edu.upt.autorent.servicio.contrato.AutoUseCase;
 /** Controlador web de la pantalla de inicio, el login y el acceso denegado. */
 
@@ -27,5 +28,6 @@ public class HomeController {
 
     // Spring Security procesa el POST del login; aquí solo se muestran las páginas.
     @GetMapping("/login") public String login() { return "auth/login"; }
-    @GetMapping("/acceso-denegado") public String accesoDenegado() { return "auth/acceso-denegado"; }
+    // GET y POST: si alguien envía un formulario a una ruta de otro rol, ve esta página (y no un error 405).
+    @RequestMapping(value = "/acceso-denegado", method = {RequestMethod.GET, RequestMethod.POST}) public String accesoDenegado() { return "auth/acceso-denegado"; }
 }

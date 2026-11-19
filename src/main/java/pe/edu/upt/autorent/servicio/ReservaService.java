@@ -170,6 +170,8 @@ public class ReservaService implements ReservaUseCase {
     @Override public Reserva crearReservaPresencial(Long clienteId, Long autoId, LocalDate inicio, LocalDate fin,
                                                      BigDecimal anticipo, MetodoPago metodo, String telefonoYape,
                                                      String codigoOperacion, String telefonoDevolucion, String trabajador) {
+        // Si el formulario llega sin cliente, se avisa con un mensaje claro (antes salía un error técnico de JPA).
+        if (clienteId == null) throw new IllegalArgumentException("Seleccione un cliente registrado.");
         Usuario cliente = usuarios.findById(clienteId)
                 .orElseThrow(() -> new IllegalArgumentException("Seleccione un cliente registrado."));
         cliente = bloquearCliente(cliente.id());
@@ -200,6 +202,7 @@ public class ReservaService implements ReservaUseCase {
                                      BigDecimal anticipo, String telefonoDevolucion) {
         validarTelefonoDevolucionSiIngresado(telefonoDevolucion);
         // Bloqueo pesimista (SELECT ... FOR UPDATE): evita que dos personas reserven el mismo auto a la vez.
+        if (autoId == null) throw new IllegalArgumentException("Seleccione un vehículo.");
         Auto auto = autos.findByIdForUpdate(autoId).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
         if (auto.estado() != EstadoAuto.DISPONIBLE) throw new IllegalArgumentException("El vehículo no está habilitado para reservas.");
         int dias = ReglasAlquiler.validarPeriodo(inicio, fin, hoy());
