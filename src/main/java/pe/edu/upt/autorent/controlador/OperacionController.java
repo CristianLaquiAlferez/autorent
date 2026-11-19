@@ -117,7 +117,7 @@ public class OperacionController {
 
     /** Formulario para registrar a un cliente que llega a la sucursal sin cuenta. */
     @GetMapping("/clientes/nuevo") public String nuevoCliente(Model model) {
-        model.addAttribute("form", new RegistroForm());
+        if (!model.containsAttribute("form")) model.addAttribute("form", new RegistroForm());
         return "operaciones/cliente-form";
     }
 
@@ -130,6 +130,8 @@ public class OperacionController {
             return "redirect:/operaciones/reservas/nueva";
         } catch (IllegalArgumentException ex) {
             flash.addFlashAttribute("error", ex.getMessage());
+            form.setPassword(null);                 // la contraseña nunca se devuelve al formulario
+            flash.addFlashAttribute("form", form);  // lo demás se conserva para no tener que escribirlo de nuevo
             return "redirect:/operaciones/clientes/nuevo";
         }
     }

@@ -17,7 +17,7 @@ public class UsuarioController {
     /** Lista de usuarios y formulario para un nuevo trabajador. */
     @GetMapping public String listar(Model model) {
         model.addAttribute("usuarios", usuarios.listarUsuarios());
-        model.addAttribute("form", new RegistroForm());
+        if (!model.containsAttribute("form")) model.addAttribute("form", new RegistroForm());
         return "admin/usuarios";
     }
 
@@ -27,7 +27,11 @@ public class UsuarioController {
             usuarios.crearTrabajador(form.getUsername(), form.getPassword(), form.getNombres(), form.getApellidos(),
                     form.getDocumento(), form.getCorreo(), form.getTelefono(), form.getDireccion());
             flash.addFlashAttribute("ok", "Trabajador registrado correctamente.");
-        } catch (IllegalArgumentException ex) { flash.addFlashAttribute("error", ex.getMessage()); }
+        } catch (IllegalArgumentException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            form.setPassword(null);                 // la contraseña nunca se devuelve al formulario
+            flash.addFlashAttribute("form", form);  // lo demás se conserva para no tener que escribirlo de nuevo
+        }
         return "redirect:/admin/usuarios";
     }
 

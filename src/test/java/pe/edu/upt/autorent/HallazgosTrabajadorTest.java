@@ -47,4 +47,18 @@ class HallazgosTrabajadorTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("auth/acceso-denegado"));
     }
+
+    @Test
+    void siElRegistroFallaSeConservanLosDatosMenosLaContrasena() throws Exception {
+        mvc.perform(post("/operaciones/clientes/crear").with(csrf()).with(user("trabajador").roles("TRABAJADOR"))
+                        .param("username", "conserva.datos").param("password", "Clave1234")
+                        .param("nombres", "Rosa").param("apellidos", "Quispe").param("documento", "11111111")
+                        .param("correo", "rosa.quispe@gmail.com").param("telefono", "987654321").param("direccion", "Tacna"))
+                .andExpect(redirectedUrl("/operaciones/clientes/nuevo"))
+                .andExpect(flash().attribute("error", "El DNI no es válido (todos sus dígitos son iguales)."))
+                .andExpect(flash().attribute("form", org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.hasProperty("nombres", org.hamcrest.Matchers.is("Rosa")),
+                        org.hamcrest.Matchers.hasProperty("correo", org.hamcrest.Matchers.is("rosa.quispe@gmail.com")),
+                        org.hamcrest.Matchers.hasProperty("password", org.hamcrest.Matchers.nullValue()))));
+    }
 }

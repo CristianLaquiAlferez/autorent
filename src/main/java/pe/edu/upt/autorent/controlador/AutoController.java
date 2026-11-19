@@ -43,7 +43,7 @@ public class AutoController {
 
     /** Formulario vacío para registrar un vehículo. */
     @GetMapping("/admin/autos/nuevo") public String nuevo(Model model) {
-        model.addAttribute("form", new AutoForm());
+        if (!model.containsAttribute("form")) model.addAttribute("form", new AutoForm());
         model.addAttribute("titulo", "Registrar vehículo");
         model.addAttribute("anioActual", LocalDate.now().getYear());
         return "autos/formulario";
@@ -57,7 +57,8 @@ public class AutoController {
         f.setTarifaDiaria(a.tarifaDiaria()); f.setDescripcion(a.descripcion());
         if (a.imagenUrl() != null && a.imagenUrl().startsWith("http")) f.setImagenUrl(a.imagenUrl());
         model.addAttribute("imagenActual", a.imagenUrl());
-        model.addAttribute("form", f); model.addAttribute("titulo", "Editar vehículo");
+        if (!model.containsAttribute("form")) model.addAttribute("form", f); // tras un error se muestra lo que se escribió
+        model.addAttribute("titulo", "Editar vehículo");
         model.addAttribute("anioActual", LocalDate.now().getYear());
         return "autos/formulario";
     }
@@ -86,6 +87,7 @@ public class AutoController {
         } catch (IllegalArgumentException | IllegalStateException | IOException ex) {
             flash.addFlashAttribute("error", ex instanceof IOException
                     ? "No se pudo leer la foto. Seleccione otro archivo." : ex.getMessage());
+            flash.addFlashAttribute("form", f); // conserva lo escrito (la foto hay que elegirla otra vez)
             return f.getId() == null ? "redirect:/admin/autos/nuevo" : "redirect:/admin/autos/" + f.getId() + "/editar";
         } catch (RuntimeException ex) { // error inesperado (por ejemplo, MySQL apagado): se registra en el log
             log.error("No se pudo guardar el vehículo", ex);

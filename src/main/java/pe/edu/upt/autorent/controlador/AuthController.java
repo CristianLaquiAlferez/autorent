@@ -19,7 +19,7 @@ public class AuthController {
 
     /** Muestra el formulario "Crear cuenta". */
     @GetMapping public String formulario(Model model) {
-        model.addAttribute("form", new RegistroForm());
+        if (!model.containsAttribute("form")) model.addAttribute("form", new RegistroForm());
         return "auth/registro";
     }
 
@@ -32,6 +32,8 @@ public class AuthController {
             return "redirect:/login";
         } catch (IllegalArgumentException ex) {
             flash.addFlashAttribute("error", ex.getMessage());
+            form.setPassword(null);                 // la contraseña nunca se devuelve al formulario
+            flash.addFlashAttribute("form", form);  // lo demás se conserva para no tener que escribirlo de nuevo
             return "redirect:/registro";
         }
     }
