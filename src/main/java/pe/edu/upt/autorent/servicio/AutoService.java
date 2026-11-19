@@ -52,6 +52,9 @@ public class AutoService implements AutoUseCase {
         String placa = auto.placa() == null ? "" : auto.placa().trim().toUpperCase();
         if (placa.isBlank() || auto.marca() == null || auto.marca().isBlank() || auto.modelo() == null || auto.modelo().isBlank())
             throw new IllegalArgumentException("Placa, marca y modelo son obligatorios.");
+        ValidacionDatos.marcaModelo(auto.marca(), "marca");
+        ValidacionDatos.marcaModelo(auto.modelo(), "modelo");
+        ValidacionDatos.colorOpcional(auto.color());
         if (auto.categoria() == null || auto.categoria().isBlank())
             throw new IllegalArgumentException("Seleccione la categoría del vehículo.");
         if (auto.anio() < 1990 || auto.anio() > LocalDate.now(reloj).getYear() + 1)
@@ -192,7 +195,7 @@ public class AutoService implements AutoUseCase {
     @Override public void iniciarMantenimiento(Long autoId, String descripcion, LocalDate inicio, LocalDate fin) {
         Auto auto = autos.findByIdForUpdate(autoId).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
         if (auto.estado() != EstadoAuto.DISPONIBLE) throw new IllegalArgumentException("Solo se puede enviar a mantenimiento un vehículo disponible.");
-        if (descripcion == null || descripcion.isBlank()) throw new IllegalArgumentException("Describa el trabajo de mantenimiento.");
+        ValidacionDatos.textoExplicativo(descripcion, "Describa el trabajo de mantenimiento (al menos 5 caracteres, por ejemplo: cambio de aceite).");
         if (inicio == null || fin == null || inicio.isBefore(LocalDate.now(reloj)) || fin.isBefore(inicio)) throw new IllegalArgumentException("Revise las fechas del mantenimiento.");
         if (reservas.existsReservaActiva(autoId, List.of(EstadoReserva.EN_CURSO)))
             throw new IllegalArgumentException("No se puede enviar a mantenimiento: el vehículo está alquilado en este momento.");

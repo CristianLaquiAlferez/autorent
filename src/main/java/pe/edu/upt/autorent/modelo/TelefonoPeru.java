@@ -4,9 +4,9 @@ package pe.edu.upt.autorent.modelo;
 public final class TelefonoPeru {
     private TelefonoPeru() { }
 
-    /** Teléfono de contacto: de 6 a 9 dígitos (fijo o celular). */
+    /** Teléfono de contacto: celular de 9 dígitos que empieza con 9, o fijo de 6 o 7 dígitos. */
     public static boolean esContactoValido(String telefono) {
-        return telefono != null && telefono.trim().matches("[0-9]{6,9}");
+        return ValidacionDatos.telefonoValido(telefono);
     }
 
     /** Celular o número Yape: 9 dígitos, empieza con 9 y se escribe sin +51. */

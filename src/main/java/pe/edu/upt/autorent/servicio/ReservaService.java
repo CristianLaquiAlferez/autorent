@@ -358,8 +358,7 @@ public class ReservaService implements ReservaUseCase {
      * Si era el anticipo, la reserva vuelve a PENDIENTE_PAGO y el cliente puede reintentar.
      */
     @Override public void rechazarPago(Long pagoId, String trabajador, String motivo) {
-        if (motivo == null || motivo.isBlank())
-            throw new IllegalArgumentException("Indique el motivo del rechazo (por ejemplo: el Yape no llegó o el código no coincide).");
+        ValidacionDatos.textoExplicativo(motivo, "Indique el motivo del rechazo (por ejemplo: el Yape no llegó o el código no coincide).");
         Pago consulta = pagos.findById(pagoId).orElseThrow(() -> new IllegalArgumentException("Pago no encontrado."));
         Reserva r = obtenerReservaParaActualizar(consulta.reservaId());
         Pago pago = pagos.findById(pagoId).orElseThrow(() -> new IllegalArgumentException("Pago no encontrado."));
@@ -495,8 +494,7 @@ public class ReservaService implements ReservaUseCase {
         if (hayCargo) {
             if (cargoDanios.signum() < 0) throw new IllegalArgumentException("El cargo adicional no puede ser negativo.");
             ReglasAlquiler.validarMonto(cargoDanios);
-            if (conceptoCargo == null || conceptoCargo.isBlank())
-                throw new IllegalArgumentException("Indique el concepto del cargo adicional (por ejemplo: rayón en puerta, falta de combustible).");
+            ValidacionDatos.textoExplicativo(conceptoCargo, "Indique el concepto del cargo adicional (por ejemplo: rayón en puerta, falta de combustible).");
         }
         LocalDate hoy = hoy();
         StringBuilder notas = new StringBuilder();
@@ -570,8 +568,8 @@ public class ReservaService implements ReservaUseCase {
             throw new IllegalArgumentException("Esta reserva ya no se puede cancelar.");
         if (esCliente && !ReglasAlquiler.sePuedeCancelar(r.fechaInicio(), ahora()))
             throw new IllegalArgumentException("La cancelación debe realizarse como mínimo 24 horas antes del inicio del alquiler.");
-        if (!esCliente && (motivo == null || motivo.isBlank()))
-            throw new IllegalArgumentException("Indique el motivo de la anulación (queda registrado en el historial de la reserva).");
+        if (!esCliente)
+            ValidacionDatos.textoExplicativo(motivo, "Indique el motivo de la anulación (queda registrado en el historial de la reserva).");
         String razon = textoOpcional(motivo, "Cancelada por el cliente");
 
         BigDecimal aDevolver = BigDecimal.ZERO;

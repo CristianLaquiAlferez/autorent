@@ -28,7 +28,7 @@
 </option>
 </select>
 </label>
-        <label class="full">Descripción del trabajo *<input name="descripcion" required maxlength="500" placeholder="Cambio de aceite, revisión de frenos...">
+        <label class="full">Descripción del trabajo *<input name="descripcion" required minlength="5" maxlength="500" placeholder="Cambio de aceite, revisión de frenos...">
 </label>
         <label>Fecha de inicio *<input type="date" name="fechaInicio" id="mantInicio" th:attr="min=${fechaHoy}" required>
 </label>
@@ -58,7 +58,7 @@
         <tr th:each="m : ${mantenimientos}">
 <td th:text="${m.id}">
 </td>
-<td th:text="${m.autoId}">
+<td th:text="${vehiculos[m.autoId] ?: m.autoId}">
 </td>
 <td th:text="${m.descripcion}">
 </td>

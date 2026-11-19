@@ -57,7 +57,7 @@ class TrazabilidadTest {
 
     private Usuario nuevoCliente() {
         int n = SECUENCIA.incrementAndGet();
-        return usuarios.registrarCliente("traza" + n, "Clave1234", "Cliente", "Traza " + n,
+        return usuarios.registrarCliente("traza" + n, "Clave1234", "Cliente", "Traza",
                 String.format("72%06d", n), "traza" + n + "@prueba.pe", "998" + String.format("%06d", n), "Tacna");
     }
 

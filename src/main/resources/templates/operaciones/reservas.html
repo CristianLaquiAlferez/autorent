@@ -86,7 +86,7 @@
 <input name="observacion" maxlength="200" required placeholder="Kilometraje, combustible y estado al recibirlo">
 <small>Si hay daños o falta combustible, registre el cargo (si llega tarde, el retraso se cobra solo).</small>
 <input type="number" name="cargoAdicional" min="0" step="0.01" placeholder="Cargo adicional S/ (opcional)">
-<input name="conceptoCargo" maxlength="120" placeholder="Concepto del cargo (ej.: rayón en puerta)">
+<input name="conceptoCargo" maxlength="120" minlength="5" placeholder="Concepto del cargo (ej.: rayón en puerta)">
 <button class="btn small primary" type="submit">Recibir auto</button>
 </form>
             <span class="muted" th:if="${r.estado.name() == 'PENDIENTE_PAGO' or r.estado.name() == 'PENDIENTE_VALIDACION'}">Validar el anticipo en la tabla inferior.</span>
@@ -94,7 +94,7 @@
 <button class="btn small secondary" type="submit">Liberar reserva vencida</button>
 </form>
             <form th:if="${cancelables.contains(r.id)}" th:action="@{/operaciones/reservas/{id}/cancelar(id=${r.id})}" method="post" class="mini-form" onsubmit="return confirm('¿Anular la reserva? Se devolverá todo lo pagado (tarjeta y PayPal en forma automática).');">
-<input name="motivo" maxlength="150" required placeholder="Motivo de la anulación">
+<input name="motivo" maxlength="150" minlength="5" required placeholder="Motivo de la anulación">
 <button class="btn small danger-btn" type="submit">Anular reserva</button>
 </form>
             <span class="muted" th:if="${r.estado.name() == 'CONFIRMADA' and saldos[r.id].signum() > 0}">Debe completar el saldo antes de la entrega.</span>
@@ -148,7 +148,7 @@
 <button class="btn small primary" type="submit">Confirmar pago</button>
 </form>
                 <form th:if="${p.estado.name() == 'PENDIENTE'}" th:action="@{/operaciones/pagos/{id}/rechazar(id=${p.id})}" method="post" class="mini-form" onsubmit="return confirm('¿Rechazar este pago pendiente?');">
-<input name="motivo" maxlength="150" required placeholder="Motivo (ej.: el Yape no llegó)">
+<input name="motivo" maxlength="150" minlength="5" required placeholder="Motivo (ej.: el Yape no llegó)">
 <button class="btn small danger-btn" type="submit">Rechazar</button>
 </form>
                 <span class="muted" th:if="${p.estado.name() != 'PENDIENTE'}" th:text="|${p.procesadoPor != null ? p.procesadoPor : '-'}${p.observacion != null ? ': ' + p.observacion : ''}|">Procesado</span>

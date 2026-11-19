@@ -79,7 +79,7 @@ class FlujosDeNegocioTest {
 
     private Usuario nuevoCliente() {
         int n = SECUENCIA.incrementAndGet();
-        return usuarios.registrarCliente("cliente" + n, "Clave1234", "Cliente", "Prueba " + n,
+        return usuarios.registrarCliente("cliente" + n, "Clave1234", "Cliente", "Prueba",
                 String.format("71%06d", n), "cliente" + n + "@prueba.pe", "999" + String.format("%06d", n), "Tacna");
     }
 

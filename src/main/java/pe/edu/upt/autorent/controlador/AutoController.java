@@ -133,7 +133,12 @@ public class AutoController {
     /** Pantalla de mantenimiento: vehículos y mantenimientos registrados. */
     @GetMapping("/admin/mantenimiento") public String mantenimiento(Model model) {
         model.addAttribute("fechaHoy", LocalDate.now()); // el mantenimiento no puede empezar en el pasado
-        model.addAttribute("autos", autos.listarTodos());
+        java.util.List<Auto> todos = autos.listarTodos();
+        model.addAttribute("autos", todos);
+        // Placa y modelo de cada vehículo, para que el historial no muestre solo el número interno.
+        java.util.Map<Long, String> vehiculos = new java.util.HashMap<>();
+        todos.forEach(a -> vehiculos.put(a.id(), a.placa() + " - " + a.marca() + " " + a.modelo()));
+        model.addAttribute("vehiculos", vehiculos);
         model.addAttribute("mantenimientos", autos.listarMantenimientos());
         return "admin/mantenimiento";
     }

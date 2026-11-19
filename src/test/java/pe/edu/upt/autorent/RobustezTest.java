@@ -98,7 +98,7 @@ class RobustezTest {
 
     private Usuario cliente() {
         int n = SEC.incrementAndGet();
-        return usuarios.registrarCliente("robusto" + n, "Clave1234", "Cliente", "Robusto " + n,
+        return usuarios.registrarCliente("robusto" + n, "Clave1234", "Cliente", "Robusto",
                 String.format("71%06d", n), "robusto" + n + "@prueba.pe", "997" + String.format("%06d", n), "Tacna");
     }
 
@@ -350,13 +350,13 @@ class RobustezTest {
                 MetodoPago.EFECTIVO, null, null, null, "trabajador"));
         reservas.entregarVehiculo(r.id(), "trabajador", "ok");
         // En curso: no se cancela ni se entrega otra vez; no se recibe dos veces.
-        assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(r.id(), "trabajador", "x"));
+        assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(r.id(), "trabajador", "Anulación de prueba"));
         assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", "ok"));
         assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "ok",
                 new BigDecimal("-1"), "x"));
         reservas.recibirVehiculo(r.id(), "trabajador", "ok", null, null);
         assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "ok", null, null));
-        assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(r.id(), "trabajador", "x"));
+        assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(r.id(), "trabajador", "Anulación de prueba"));
         // Un Yape con el mismo código no se registra dos veces.
         String codigo = yape();
         reservas.crearReservaOnline(cliente().username(), auto("50.00").id(), hoy().plusDays(3), hoy().plusDays(4),
@@ -508,7 +508,7 @@ class RobustezTest {
                         if (alguna == null) break;
                         boolean danios = azar.nextInt(3) == 0;
                         reservas.recibirVehiculo(alguna.id(), "trabajador", "ok",
-                                danios ? BigDecimal.valueOf(10 + azar.nextInt(200)) : null, danios ? "Daño" : null);
+                                danios ? BigDecimal.valueOf(10 + azar.nextInt(200)) : null, danios ? "Daño leve" : null);
                         conteo.merge("recepcion", 1, Integer::sum);
                     }
                     case 8 -> {               // el cliente cancela

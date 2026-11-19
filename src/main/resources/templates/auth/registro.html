@@ -23,15 +23,15 @@
 </label>
             <label>Contraseña *<input th:field="*{password}" type="password" required minlength="8" maxlength="72" pattern="(?=.*[A-Za-zÁÉÍÓÚáéíóúÑñ])(?=.*[0-9]).{8,72}" title="Mínimo 8 caracteres, con letras y números">
 </label>
-            <label>Nombres *<input th:field="*{nombres}" required maxlength="80">
+            <label>Nombres *<input th:field="*{nombres}" required maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '\-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*" minlength="2" title="Solo letras, un espacio entre palabras, apóstrofo o guion (sin números ni símbolos)">
 </label>
-            <label>Apellidos *<input th:field="*{apellidos}" required maxlength="80">
+            <label>Apellidos *<input th:field="*{apellidos}" required maxlength="80" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '\-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*" minlength="2" title="Solo letras, un espacio entre palabras, apóstrofo o guion (sin números ni símbolos)">
 </label>
             <label>DNI *<input th:field="*{documento}" required pattern="[0-9]{8}" maxlength="8" minlength="8" inputmode="numeric" title="DNI de 8 dígitos">
 </label>
-            <label>Correo *<input th:field="*{correo}" type="email" required maxlength="120">
+            <label>Correo *<input th:field="*{correo}" type="email" required maxlength="120" pattern="[a-zA-Z0-9]([a-zA-Z0-9_%+\-]|\.(?!\.))*@([a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,24}" title="Correo válido, por ejemplo: nombre@gmail.com">
 </label>
-            <label>Teléfono<input th:field="*{telefono}" type="tel" inputmode="numeric" maxlength="9" minlength="6" pattern="[0-9]{6,9}" data-telefono-peru="contacto" title="Ingrese de 6 a 9 dígitos (sin +51)">
+            <label>Teléfono<input th:field="*{telefono}" type="tel" inputmode="numeric" maxlength="9" minlength="6" pattern="9[0-9]{8}|[1-8][0-9]{5,6}" data-telefono-peru="contacto" title="Celular de 9 dígitos que empiece con 9, o fijo de 6 o 7 dígitos (sin +51)">
 </label>
             <label>Dirección<input th:field="*{direccion}" maxlength="200">
 </label>

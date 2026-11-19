@@ -1,10 +1,11 @@
 package pe.edu.upt.autorent.servicio;
 
+import pe.edu.upt.autorent.modelo.ValidacionDatos;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import pe.edu.upt.autorent.modelo.Rol;
-import pe.edu.upt.autorent.modelo.TelefonoPeru;
 import pe.edu.upt.autorent.modelo.Usuario;
 import pe.edu.upt.autorent.servicio.contrato.UsuarioUseCase;
 import pe.edu.upt.autorent.modelo.EstadoReserva;
@@ -15,7 +16,6 @@ import pe.edu.upt.autorent.repositorio.ReservaRepositoryPort;
 import pe.edu.upt.autorent.repositorio.UsuarioRepositoryPort;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 /**
  * Servicio de negocio de usuarios: registro de clientes y trabajadores, consultas y activación.
  * Las contraseñas nunca se guardan en texto plano: se cifran con BCrypt a través de PasswordEncoderPort.
@@ -27,9 +27,6 @@ import java.util.regex.Pattern;
 // y varias reservas simultáneas del mismo auto pasaban a la vez.
 @Transactional(isolation = Isolation.READ_COMMITTED)
 public class UsuarioService implements UsuarioUseCase {
-    // Reglas de formato: DNI de 8 dígitos y correo con el formato nombre@dominio.ext
-    private static final Pattern DNI = Pattern.compile("\\d{8}");
-    private static final Pattern EMAIL = Pattern.compile("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
     private final UsuarioRepositoryPort usuarios;
     private final PasswordEncoderPort encoder;
     private final ReservaRepositoryPort reservas;
@@ -69,11 +66,13 @@ public class UsuarioService implements UsuarioUseCase {
         if (password == null || password.length() < 8) throw new IllegalArgumentException("La contraseña debe tener como mínimo 8 caracteres.");
         if (!password.matches(".*[A-Za-zÁÉÍÓÚáéíóúÑñ].*") || !password.matches(".*\\d.*"))
             throw new IllegalArgumentException("La contraseña debe combinar letras y números.");
-        if (nombres.isBlank() || apellidos.isBlank()) throw new IllegalArgumentException("Ingrese nombres y apellidos.");
-        if (!DNI.matcher(documento).matches()) throw new IllegalArgumentException("El documento debe tener 8 dígitos.");
-        if (!EMAIL.matcher(correo).matches()) throw new IllegalArgumentException("Ingrese un correo válido.");
-        if (!telefono.isBlank() && !TelefonoPeru.esContactoValido(telefono))
-            throw new IllegalArgumentException("El teléfono de contacto debe tener entre 6 y 9 dígitos numéricos, sin +51.");
+        // Formato de cada dato (reglas comunes en ValidacionDatos): nombres solo con letras, DNI real,
+        // correo con formato y dominio bien escritos, teléfono peruano de celular o fijo.
+        ValidacionDatos.nombre(nombres, "nombres");
+        ValidacionDatos.nombre(apellidos, "apellidos");
+        ValidacionDatos.dni(documento);
+        ValidacionDatos.correo(correo);
+        ValidacionDatos.telefonoOpcional(telefono);
         if (usuarios.existsByUsername(username)) throw new IllegalArgumentException("Ese nombre de usuario ya está registrado.");
         if (usuarios.existsByDocumento(documento)) throw new IllegalArgumentException("Ese documento ya está registrado.");
         if (usuarios.existsByCorreo(correo)) throw new IllegalArgumentException("Ese correo ya está registrado.");

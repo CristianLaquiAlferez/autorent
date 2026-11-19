@@ -19,9 +19,9 @@
         <input type="hidden" th:field="*{id}">
         <label>Placa *<input th:field="*{placa}" required minlength="5" maxlength="15" pattern="[A-Za-z0-9\-]{5,15}" style="text-transform:uppercase" title="De 5 a 15 letras, números o guiones (ej.: ABC-123)">
 </label>
-        <label>Marca *<input th:field="*{marca}" required maxlength="60">
+        <label>Marca *<input th:field="*{marca}" required maxlength="60" pattern="(?=.*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .\-]*" title="Letras, y si hace falta números, espacio, punto o guion (ej.: CX-5)">
 </label>
-        <label>Modelo *<input th:field="*{modelo}" required maxlength="60">
+        <label>Modelo *<input th:field="*{modelo}" required maxlength="60" pattern="(?=.*[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9][A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 .\-]*" title="Letras, y si hace falta números, espacio, punto o guion (ej.: CX-5)">
 </label>
         <label>Año *<input th:field="*{anio}" type="number" min="1990" th:attr="max=${anioActual + 1}" required>
 </label>
@@ -35,7 +35,7 @@
 <option value="Van">Van</option>
 </select>
 </label>
-        <label>Color<input th:field="*{color}" maxlength="40">
+        <label>Color<input th:field="*{color}" maxlength="40" pattern="[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+( [A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*" title="Solo letras, por ejemplo: Gris oscuro">
 </label>
         <label>Tarifa diaria (S/) *<input th:field="*{tarifaDiaria}" type="number" min="1" max="99999999.99" step="0.01" required>
 </label>

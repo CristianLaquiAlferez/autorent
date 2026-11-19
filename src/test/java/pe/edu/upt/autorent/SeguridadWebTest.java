@@ -99,9 +99,11 @@ class SeguridadWebTest {
 
     @Test
     void elTextoQueEscribeUnUsuarioNoSeEjecutaComoCodigo() throws Exception {
-        Usuario c = cliente("<script>alert('x')</script>");
-        Reserva r = reservaPagada(c);
-        mvc.perform(get("/operaciones/reservas/" + r.id()).with(user("trabajador").roles("TRABAJADOR")))
+        // Los nombres ya no admiten símbolos; el intento de inyección se hace por un campo de texto libre
+        // (la descripción del vehículo), que se muestra en el catálogo público.
+        autos.guardar(new Auto(null, "XSS-" + SEC.incrementAndGet(), "Kia", "Picanto", 2024, "City", "Gris",
+                new BigDecimal("50.00"), "<script>alert('x')</script>", EstadoAuto.DISPONIBLE));
+        mvc.perform(get("/autos"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(not(containsString("<script>alert('x')</script>"))))
                 .andExpect(content().string(containsString("&lt;script&gt;")));

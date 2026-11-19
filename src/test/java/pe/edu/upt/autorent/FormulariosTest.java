@@ -55,7 +55,9 @@ class FormulariosTest {
     @Test
     void laIlustracionEsPublicaUsaElColorDelAutoYNoEjecutaTextoInyectado() throws Exception {
         Auto rojo = auto("Hatchback", "Rojo", "Suzuki");
-        Auto raro = auto("SUV", "Azul marino", "<script>alert(1)</script>");
+        // Una marca con código ya no se puede guardar: el servidor la rechaza al registrar el vehículo.
+        assertThrows(IllegalArgumentException.class, () -> auto("SUV", "Azul", "<script>alert(1)</script>"));
+        Auto raro = auto("SUV", "Azul marino", "Kia");
         mvc.perform(get("/autos/" + rojo.id() + "/ilustracion.svg"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("image/svg+xml"))
@@ -63,8 +65,7 @@ class FormulariosTest {
                 .andExpect(content().string(containsString("Hatchback · Rojo")));
         mvc.perform(get("/autos/" + raro.id() + "/ilustracion.svg"))
                 .andExpect(content().string(containsString("#1e5aa8")))          // "Azul marino" -> azul
-                .andExpect(content().string(not(containsString("<script>"))))
-                .andExpect(content().string(containsString("&lt;script&gt;")));
+                .andExpect(content().string(not(containsString("<script>"))));
         // El catálogo usa la ilustración cuando el auto no tiene foto.
         mvc.perform(get("/autos")).andExpect(content().string(containsString("/autos/" + rojo.id() + "/ilustracion.svg")));
     }
