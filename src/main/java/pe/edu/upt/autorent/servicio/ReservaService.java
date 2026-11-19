@@ -484,7 +484,7 @@ public class ReservaService implements ReservaUseCase {
         // El acta de entrega es la prueba de cómo salió el auto: sin ella no se puede reclamar un daño al recibirlo.
         ValidacionDatos.textoExplicativo(observacion, "Registre el estado del auto al entregarlo (kilometraje, combustible y daños visibles).");
         cambiarEstado(r, EstadoReserva.EN_CURSO, AccionReserva.ENTREGA, trabajador,
-                "Entregado a " + r.cliente().nombres() + " " + r.cliente().apellidos() + ". Estado del auto: " + observacion.trim());
+                "Entregado a " + r.cliente().nombres() + " " + r.cliente().apellidos() + ". Estado del auto: " + textoOpcional(observacion, "sin observaciones") + ".");
     }
 
     /**
@@ -527,8 +527,11 @@ public class ReservaService implements ReservaUseCase {
                         + (saldo.signum() > 0 ? ". Queda saldo por cobrar: S/ " + saldo.setScale(2, RoundingMode.HALF_UP) : ". Sin deuda."));
     }
 
+    /** Texto del usuario para el historial, sin el punto final (el historial agrega el suyo y no quedan dos). */
     private static String textoOpcional(String texto, String porDefecto) {
-        return texto == null || texto.isBlank() ? porDefecto : texto.trim();
+        if (texto == null || texto.isBlank()) return porDefecto;
+        String limpio = texto.trim().replaceAll("[.\\s]+$", "");
+        return limpio.isEmpty() ? porDefecto : limpio;
     }
 
     // =================================================================================

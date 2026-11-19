@@ -196,7 +196,9 @@ public class AutoService implements AutoUseCase {
         Auto auto = autos.findByIdForUpdate(autoId).orElseThrow(() -> new IllegalArgumentException("Vehículo no encontrado."));
         if (auto.estado() != EstadoAuto.DISPONIBLE) throw new IllegalArgumentException("Solo se puede enviar a mantenimiento un vehículo disponible.");
         ValidacionDatos.textoExplicativo(descripcion, "Describa el trabajo de mantenimiento (al menos 5 caracteres, por ejemplo: cambio de aceite).");
-        if (inicio == null || fin == null || inicio.isBefore(LocalDate.now(reloj)) || fin.isBefore(inicio)) throw new IllegalArgumentException("Revise las fechas del mantenimiento.");
+        if (inicio == null || fin == null) throw new IllegalArgumentException("Indique la fecha de inicio y de fin del mantenimiento.");
+        if (inicio.isBefore(LocalDate.now(reloj))) throw new IllegalArgumentException("El mantenimiento no puede empezar en una fecha pasada.");
+        if (fin.isBefore(inicio)) throw new IllegalArgumentException("La fecha de fin del mantenimiento no puede ser anterior a la de inicio.");
         if (reservas.existsReservaActiva(autoId, List.of(EstadoReserva.EN_CURSO)))
             throw new IllegalArgumentException("No se puede enviar a mantenimiento: el vehículo está alquilado en este momento.");
         // El mantenimiento ocupa del inicio al fin, ambos incluidos: equivale al periodo [inicio, fin + 1).
