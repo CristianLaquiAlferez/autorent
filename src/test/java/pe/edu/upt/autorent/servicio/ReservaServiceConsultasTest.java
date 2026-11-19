@@ -53,7 +53,21 @@ class ReservaServiceConsultasTest {
                 reserva(2, EstadoReserva.EN_CURSO, lejos, "300.00"),
                 reserva(3, EstadoReserva.PENDIENTE_PAGO, manana, "300.00"));
 
-        Set<Long> cancelables = servicio.reservasCancelables(reservas);
+        // La reserva 3 empieza mañana y tiene un Yape por validar: ya no se puede cancelar.
+        Set<Long> cancelables = servicio.reservasCancelables(reservas, List.of(pago(3, "60.00", EstadoPago.PENDIENTE)));
+
+        assertEquals(Set.of(1L), cancelables);
+    }
+
+    @Test
+    void fueraDePlazoSeCancelaSiSoloHayUnEfectivoSinLlevar() {
+        LocalDate manana = LocalDate.now().plusDays(1);
+        List<Reserva> reservas = List.of(reserva(1, EstadoReserva.PENDIENTE_PAGO, manana, "300.00"),
+                reserva(2, EstadoReserva.CONFIRMADA, manana, "300.00"));
+        Pago efectivo = new Pago(null, 1L, new BigDecimal("60.00"), MetodoPago.EFECTIVO, TipoPago.ANTICIPO,
+                EstadoPago.PENDIENTE, null, null, LocalDateTime.now(), null, "cliente", null, null, null);
+
+        Set<Long> cancelables = servicio.reservasCancelables(reservas, List.of(efectivo, pago(2, "60.00", EstadoPago.CONFIRMADO)));
 
         assertEquals(Set.of(1L), cancelables);
     }

@@ -183,8 +183,8 @@ class AutoRentIntegracionTest {
     @Test @WithMockUser(username = "cliente", roles = "CLIENTE")
     void erroresDeFormulariosNoQuedanSinRespuesta() throws Exception {
         mvc.perform(get("/reservas/nueva/999999999"))
-                .andExpect(status().isBadRequest())
-                .andExpect(view().name("error-operacion"));
+                .andExpect(redirectedUrl("/autos"))
+                .andExpect(flash().attribute("error", "Vehículo no encontrado."));
         mvc.perform(post("/reservas/crear").with(csrf())
                 .param("autoId", "no-es-un-numero")
                 .param("fechaInicio", "fecha-invalida")

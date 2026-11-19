@@ -569,7 +569,7 @@ public class ReservaService implements ReservaUseCase {
             throw new IllegalArgumentException("No puede cancelar una reserva que pertenece a otro cliente.");
         if (!r.estado().esActiva())
             throw new IllegalArgumentException("Esta reserva ya no se puede cancelar.");
-        if (esCliente && !ReglasAlquiler.sePuedeCancelar(r.fechaInicio(), ahora()))
+        if (esCliente && !clientePuedeCancelar(r, pagos.findByReservaId(reservaId), ahora()))
             throw new IllegalArgumentException("La cancelación debe realizarse como mínimo 24 horas antes del inicio del alquiler.");
         if (!esCliente)
             ValidacionDatos.textoExplicativo(motivo, "Indique el motivo de la anulación (queda registrado en el historial de la reserva).");
@@ -679,13 +679,25 @@ public class ReservaService implements ReservaUseCase {
 
     /** Reservas activas (pendientes o confirmadas) que aún están a más de 24 horas de su inicio. */
     @Override @Transactional(readOnly = true)
-    public Set<Long> reservasCancelables(List<Reserva> listaReservas) {
+    public Set<Long> reservasCancelables(List<Reserva> listaReservas, List<Pago> listaPagos) {
         LocalDateTime ahora = ahora();
         Set<Long> ids = new HashSet<>();
         for (Reserva r : listaReservas) {
-            if (r.estado().esActiva() && ReglasAlquiler.sePuedeCancelar(r.fechaInicio(), ahora)) ids.add(r.id());
+            List<Pago> pagosReserva = listaPagos.stream().filter(p -> r.id().equals(p.reservaId())).toList();
+            if (r.estado().esActiva() && clientePuedeCancelar(r, pagosReserva, ahora)) ids.add(r.id());
         }
         return ids;
+    }
+
+    /**
+     * El cliente cancela hasta 24 horas antes del inicio. Pasado ese plazo, solo puede cancelar si no hay dinero de por medio:
+     * ningún pago confirmado ni un Yape o pago en línea en curso (a lo sumo, un efectivo que aún no llevó a la sucursal).
+     * Así no queda atrapado en una reserva que nunca pagó y el auto se libera de inmediato.
+     */
+    private static boolean clientePuedeCancelar(Reserva r, List<Pago> pagosReserva, LocalDateTime ahora) {
+        if (ReglasAlquiler.sePuedeCancelar(r.fechaInicio(), ahora)) return true;
+        return pagosReserva.stream().noneMatch(p -> p.estado() == EstadoPago.CONFIRMADO
+                || (p.estado() == EstadoPago.PENDIENTE && p.metodo() != MetodoPago.EFECTIVO));
     }
 
     /** El personal puede anular cualquier reserva activa que todavía no se entregó. */

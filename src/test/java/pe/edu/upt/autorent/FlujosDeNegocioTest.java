@@ -255,6 +255,22 @@ class FlujosDeNegocioTest {
     }
 
     @Test
+    void elClienteCancelaFueraDePlazoSoloSiNoHayDineroDePorMedio() {
+        // Efectivo que aún no llevó a la sucursal: no hay nada que devolver, puede cancelar y el auto queda libre.
+        Usuario c = nuevoCliente(); Auto a = nuevoAuto();
+        Reserva enEfectivo = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(1), hoy().plusDays(2),
+                new BigDecimal("50.00"), MetodoPago.EFECTIVO, null, null, "999111222");
+        assertTrue(reservas.reservasCancelables(List.of(enEfectivo), reservas.listarPagosDeCliente(c.username())).contains(enEfectivo.id()));
+        reservas.cancelarReserva(enEfectivo.id(), c.username(), null);
+        assertEquals(EstadoReserva.CANCELADA, reservas.obtenerReserva(enEfectivo.id()).estado());
+        // Yape enviado y por validar: el dinero pudo haber llegado, así que debe esperar a la sucursal.
+        Reserva conYape = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(1), hoy().plusDays(2),
+                new BigDecimal("50.00"), MetodoPago.YAPE, "999111222", "YAPE-TARDE-01", null);
+        assertFalse(reservas.reservasCancelables(List.of(conYape), reservas.listarPagosDeCliente(c.username())).contains(conYape.id()));
+        assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(conYape.id(), c.username(), null));
+    }
+
+    @Test
     void elPersonalPuedeAnularDentroDeLas24HorasPeroElClienteNo() {
         Usuario c = nuevoCliente(); Auto a = nuevoAuto();
         Reserva r = reservas.crearReservaPresencial(c.id(), a.id(), hoy().plusDays(1), hoy().plusDays(2),

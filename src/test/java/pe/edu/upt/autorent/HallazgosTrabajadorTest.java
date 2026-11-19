@@ -61,4 +61,15 @@ class HallazgosTrabajadorTest {
                         org.hamcrest.Matchers.hasProperty("correo", org.hamcrest.Matchers.is("rosa.quispe@gmail.com")),
                         org.hamcrest.Matchers.hasProperty("password", org.hamcrest.Matchers.nullValue()))));
     }
+
+    @Test
+    void elFormularioDeReservaDeUnAutoInexistenteOInactivoVuelveAlCatalogo() throws Exception {
+        var cliente = user("cliente").roles("CLIENTE");
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/reservas/nueva/9999").with(cliente))
+                .andExpect(redirectedUrl("/autos"))
+                .andExpect(flash().attribute("error", "Vehículo no encontrado."));
+        mvc.perform(post("/reservas/crear").with(csrf()).with(cliente).param("metodoPago", "EFECTIVO"))
+                .andExpect(redirectedUrl("/autos"))
+                .andExpect(flash().attributeExists("error"));
+    }
 }

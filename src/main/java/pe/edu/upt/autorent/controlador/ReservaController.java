@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import pe.edu.upt.autorent.modelo.Auto;
+import pe.edu.upt.autorent.modelo.EstadoAuto;
 import pe.edu.upt.autorent.modelo.EstadoPago;
 import pe.edu.upt.autorent.modelo.MetodoPago;
 import pe.edu.upt.autorent.modelo.Pago;
@@ -63,8 +64,15 @@ public class ReservaController {
     }
 
     /** Formulario de reserva de un vehículo; muestra el número Yape de la empresa. */
-    @GetMapping("/reservas/nueva/{autoId}") public String nueva(@PathVariable Long autoId, Model model) {
-        Auto auto = autos.obtener(autoId);
+    @GetMapping("/reservas/nueva/{autoId}") public String nueva(@PathVariable Long autoId, Model model, RedirectAttributes flash) {
+        Auto auto;
+        try { auto = autos.obtener(autoId); }
+        catch (IllegalArgumentException ex) { flash.addFlashAttribute("error", ex.getMessage()); return "redirect:/autos"; }
+        // Un vehículo inactivo o en mantenimiento no se ofrece aunque se escriba su dirección a mano.
+        if (auto.estado() != EstadoAuto.DISPONIBLE) {
+            flash.addFlashAttribute("error", "El vehículo no está habilitado para reservas.");
+            return "redirect:/autos";
+        }
         // Si se vuelve aquí por un error, se conserva lo que el cliente ya había escrito.
         ReservaForm form = model.containsAttribute("form") ? (ReservaForm) model.getAttribute("form") : new ReservaForm();
         form.setAutoId(autoId);
@@ -93,6 +101,7 @@ public class ReservaController {
             return "redirect:/mis-reservas";
         } catch (IllegalArgumentException ex) {
             flash.addFlashAttribute("error", ex.getMessage());
+            if (f.getAutoId() == null) return "redirect:/autos";
             flash.addFlashAttribute("form", f);
             return "redirect:/reservas/nueva/" + f.getAutoId();
         }
@@ -107,7 +116,7 @@ public class ReservaController {
         model.addAttribute("pagos", listaPagos);
         // El servicio decide en qué reservas se puede reintentar el pago o cancelar.
         model.addAttribute("reintentables", reservas.reservasReintentables(lista, listaPagos));
-        model.addAttribute("cancelables", reservas.reservasCancelables(lista));
+        model.addAttribute("cancelables", reservas.reservasCancelables(lista, listaPagos));
         model.addAttribute("saldos", reservas.calcularSaldos(lista, listaPagos));
         // Reservas con un pago en línea a medio terminar: se muestra el botón "Pagar ahora".
         Map<Long, Long> pagosEnCurso = new HashMap<>();

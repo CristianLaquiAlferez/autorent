@@ -65,7 +65,7 @@ public interface ReservaUseCase {
     /** Consulta: saldo pendiente de cada reserva (total menos pagos confirmados). */
     Map<Long, BigDecimal> calcularSaldos(List<Reserva> reservas, List<Pago> pagos);
     /** Consulta: códigos de las reservas que el cliente todavía puede cancelar (regla de 24 horas). */
-    Set<Long> reservasCancelables(List<Reserva> reservas);
+    Set<Long> reservasCancelables(List<Reserva> reservas, List<Pago> pagos);
     /** Consulta: códigos de las reservas que el personal puede anular (cualquier reserva activa antes de la entrega). */
     Set<Long> reservasAnulablesPorPersonal(List<Reserva> reservas);
     /** Consulta: códigos de las reservas en las que el cliente puede reintentar el anticipo. */
