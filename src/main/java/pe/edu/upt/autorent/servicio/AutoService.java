@@ -52,6 +52,8 @@ public class AutoService implements AutoUseCase {
         String placa = auto.placa() == null ? "" : auto.placa().trim().toUpperCase();
         if (placa.isBlank() || auto.marca() == null || auto.marca().isBlank() || auto.modelo() == null || auto.modelo().isBlank())
             throw new IllegalArgumentException("Placa, marca y modelo son obligatorios.");
+        if (auto.categoria() == null || auto.categoria().isBlank())
+            throw new IllegalArgumentException("Seleccione la categoría del vehículo.");
         if (auto.anio() < 1990 || auto.anio() > LocalDate.now(reloj).getYear() + 1)
             throw new IllegalArgumentException("El año del vehículo no es válido.");
         if (auto.tarifaDiaria() == null || auto.tarifaDiaria().compareTo(BigDecimal.ZERO) <= 0)
