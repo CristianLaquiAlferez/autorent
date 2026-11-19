@@ -342,20 +342,20 @@ class RobustezTest {
         Usuario c2 = cliente(); Auto b = auto("100.00");
         Reserva r = reservas.crearReservaPresencial(c2.id(), b.id(), hoy(), hoy().plusDays(2), new BigDecimal("50.00"),
                 MetodoPago.EFECTIVO, null, null, "999111222", "trabajador");
-        assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", "ok"));
+        assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", "Todo en orden"));
         assertThrows(IllegalArgumentException.class, () -> reservas.registrarPagoSaldo(r.id(), new BigDecimal("150.01"),
                 MetodoPago.EFECTIVO, null, null, null, "trabajador"));
         reservas.registrarPagoSaldo(r.id(), new BigDecimal("150.00"), MetodoPago.EFECTIVO, null, null, null, "trabajador");
         assertThrows(IllegalArgumentException.class, () -> reservas.registrarPagoSaldo(r.id(), new BigDecimal("0.01"),
                 MetodoPago.EFECTIVO, null, null, null, "trabajador"));
-        reservas.entregarVehiculo(r.id(), "trabajador", "ok");
+        reservas.entregarVehiculo(r.id(), "trabajador", "Todo en orden");
         // En curso: no se cancela ni se entrega otra vez; no se recibe dos veces.
         assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(r.id(), "trabajador", "Anulación de prueba"));
-        assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", "ok"));
-        assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "ok",
+        assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", "Todo en orden"));
+        assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "Todo en orden",
                 new BigDecimal("-1"), "x"));
-        reservas.recibirVehiculo(r.id(), "trabajador", "ok", null, null);
-        assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "ok", null, null));
+        reservas.recibirVehiculo(r.id(), "trabajador", "Todo en orden", null, null);
+        assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "Todo en orden", null, null));
         assertThrows(IllegalArgumentException.class, () -> reservas.cancelarReserva(r.id(), "trabajador", "Anulación de prueba"));
         // Un Yape con el mismo código no se registra dos veces.
         String codigo = yape();
@@ -370,7 +370,7 @@ class RobustezTest {
         Usuario c = cliente(); Auto a = auto("90.00");
         Reserva r = reservas.crearReservaPresencial(c.id(), a.id(), hoy(), hoy().plusDays(1), new BigDecimal("90.00"),
                 MetodoPago.EFECTIVO, null, null, "999111222", "trabajador");
-        reservas.entregarVehiculo(r.id(), "trabajador", "ok");
+        reservas.entregarVehiculo(r.id(), "trabajador", "Todo en orden");
         reloj.avanzar(Duration.ofDays(3));                         // devuelve 2 días tarde
         reservas.recibirVehiculo(r.id(), "trabajador", "faro roto", new BigDecimal("120.50"), "Faro delantero roto");
         Reserva f = reservas.obtenerReserva(r.id());
@@ -501,13 +501,13 @@ class RobustezTest {
                     }
                     case 6 -> {               // entregar
                         if (alguna == null) break;
-                        reservas.entregarVehiculo(alguna.id(), "trabajador", "ok");
+                        reservas.entregarVehiculo(alguna.id(), "trabajador", "Todo en orden");
                         conteo.merge("entrega", 1, Integer::sum);
                     }
                     case 7 -> {               // recibir, a veces con daños
                         if (alguna == null) break;
                         boolean danios = azar.nextInt(3) == 0;
-                        reservas.recibirVehiculo(alguna.id(), "trabajador", "ok",
+                        reservas.recibirVehiculo(alguna.id(), "trabajador", "Todo en orden",
                                 danios ? BigDecimal.valueOf(10 + azar.nextInt(200)) : null, danios ? "Daño leve" : null);
                         conteo.merge("recepcion", 1, Integer::sum);
                     }

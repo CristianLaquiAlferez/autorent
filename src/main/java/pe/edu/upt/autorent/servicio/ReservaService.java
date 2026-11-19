@@ -434,7 +434,9 @@ public class ReservaService implements ReservaUseCase {
             throw new IllegalArgumentException("El pago supera el saldo pendiente de S/ " + restante + ".");
         validarDatosPago(metodo, telefonoYape, codigoOperacion, true, false);
         validarTelefonoDevolucionSiIngresado(telefonoDevolucion);
-        if (metodo == MetodoPago.EFECTIVO) {
+        // Un cargo cobrado después de recibir el auto (alquiler FINALIZADO) ya no puede devolverse: no se pide número de devolución.
+        boolean puedeDevolverse = r.estado() == EstadoReserva.CONFIRMADA;
+        if (metodo == MetodoPago.EFECTIVO && (puedeDevolverse || (telefonoDevolucion != null && !telefonoDevolucion.isBlank()))) {
             String destino = (telefonoDevolucion == null || telefonoDevolucion.isBlank()) ? r.telefonoDevolucion() : telefonoDevolucion;
             if (!telefonoValido(destino))
                 throw new IllegalArgumentException("Para pagos en efectivo, indique un número móvil para una posible devolución.");
@@ -479,9 +481,10 @@ public class ReservaService implements ReservaUseCase {
             throw new IllegalArgumentException("El vehículo está inactivo y no puede entregarse.");
         if (reservas.existsOtroAlquilerEnCurso(r.auto().id(), reservaId))
             throw new IllegalArgumentException("El auto sigue entregado en otro alquiler. Registre primero su recepción.");
+        // El acta de entrega es la prueba de cómo salió el auto: sin ella no se puede reclamar un daño al recibirlo.
+        ValidacionDatos.textoExplicativo(observacion, "Registre el estado del auto al entregarlo (kilometraje, combustible y daños visibles).");
         cambiarEstado(r, EstadoReserva.EN_CURSO, AccionReserva.ENTREGA, trabajador,
-                "Entregado a " + r.cliente().nombres() + " " + r.cliente().apellidos() + ". Estado del auto: "
-                        + textoOpcional(observacion, "sin observaciones"));
+                "Entregado a " + r.cliente().nombres() + " " + r.cliente().apellidos() + ". Estado del auto: " + observacion.trim());
     }
 
     /**
@@ -493,6 +496,7 @@ public class ReservaService implements ReservaUseCase {
                                           BigDecimal cargoDanios, String conceptoCargo) {
         Reserva r = obtenerReservaParaActualizar(reservaId);
         if (r.estado() != EstadoReserva.EN_CURSO) throw new IllegalArgumentException("El vehículo no figura como alquiler en curso.");
+        ValidacionDatos.textoExplicativo(observacion, "Registre el estado del auto al recibirlo (kilometraje, combustible y daños).");
         boolean hayCargo = cargoDanios != null && cargoDanios.signum() != 0;
         if (hayCargo) {
             if (cargoDanios.signum() < 0) throw new IllegalArgumentException("El cargo adicional no puede ser negativo.");

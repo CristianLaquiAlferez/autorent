@@ -26,6 +26,8 @@ class HallazgosTrabajadorTest {
 
     @Autowired private MockMvc mvc;
     @Autowired private ReservaUseCase reservas;
+    @Autowired private pe.edu.upt.autorent.servicio.contrato.AutoUseCase autos;
+    @Autowired private pe.edu.upt.autorent.servicio.contrato.UsuarioUseCase usuarios;
 
     @Test
     void unaReservaPresencialSinClienteOSinVehiculoDaUnMensajeClaro() {
@@ -36,6 +38,36 @@ class HallazgosTrabajadorTest {
         IllegalArgumentException sinAuto = assertThrows(IllegalArgumentException.class, () -> reservas.crearReservaPresencial(
                 3L, null, d, d.plusDays(1), new BigDecimal("50"), MetodoPago.EFECTIVO, null, null, "987654321", "trabajador"));
         assertEquals("Seleccione un vehículo.", sinAuto.getMessage());
+    }
+
+    @Test
+    void entregarYRecibirExigenRegistrarElEstadoDelAuto() {
+        LocalDate hoy = LocalDate.now();
+        Long clienteId = usuarios.buscarPorUsername("cliente").orElseThrow().id();
+        // Se usa el primer auto libre hoy (los datos de demostración ocupan algunos).
+        pe.edu.upt.autorent.modelo.Reserva creada = null;
+        for (var auto : autos.listarDisponibles()) {
+            try {
+                // Pagado con Yape y sin número de devolución: así se comprueba que el cargo final no lo exige.
+                creada = reservas.crearReservaPresencial(clienteId, auto.id(), hoy, hoy.plusDays(1), auto.tarifaDiaria(),
+                        MetodoPago.YAPE, "987654321", "ACTA-" + auto.id(), null, "trabajador");
+                break;
+            } catch (IllegalArgumentException ocupado) { /* probar con el siguiente */ }
+        }
+        assertNotNull(creada);
+        var r = creada;
+        // Si el Yape del mostrador quedó por validar, se valida; si ya quedó confirmado, no hay nada que hacer.
+        reservas.listarPagosDeCliente("cliente").stream()
+                .filter(p -> p.reservaId().equals(r.id()) && p.estado() == pe.edu.upt.autorent.modelo.EstadoPago.PENDIENTE)
+                .findFirst().ifPresent(p -> reservas.confirmarPago(p.id(), "trabajador"));
+        IllegalArgumentException sinActa = assertThrows(IllegalArgumentException.class, () -> reservas.entregarVehiculo(r.id(), "trabajador", " "));
+        assertTrue(sinActa.getMessage().startsWith("Registre el estado del auto al entregarlo"));
+        reservas.entregarVehiculo(r.id(), "trabajador", "45 200 km, tanque lleno, sin golpes");
+        assertThrows(IllegalArgumentException.class, () -> reservas.recibirVehiculo(r.id(), "trabajador", "", null, null));
+        reservas.recibirVehiculo(r.id(), "trabajador", "45 400 km, rayón en la puerta", new BigDecimal("80.00"), "Rayón en la puerta");
+        // El cargo se cobra en efectivo sin pedir número de devolución: el alquiler ya terminó.
+        var cargo = reservas.registrarPagoSaldo(r.id(), new BigDecimal("80.00"), MetodoPago.EFECTIVO, null, null, null, "trabajador");
+        assertEquals(pe.edu.upt.autorent.modelo.EstadoPago.CONFIRMADO, cargo.estado());
     }
 
     @Test
