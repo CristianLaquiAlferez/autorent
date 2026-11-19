@@ -67,11 +67,17 @@ class ValidacionDatosTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"Toyota", "Hyundai", "CX-5", "Model 3", "Mercedes-Benz", "Sw4"})
-    void marcasYModelosReales(String v) { assertDoesNotThrow(() -> ValidacionDatos.marcaModelo(v, "marca")); }
+    void marcasYModelosReales(String v) { assertDoesNotThrow(() -> ValidacionDatos.marcaModelo(v, "La marca")); }
 
     @ParameterizedTest
     @ValueSource(strings = {"", "123", "@@@", "Toyota!", "-Kia", "<b>Kia</b>"})
-    void marcasYModelosSinSentido(String v) { assertThrows(IllegalArgumentException.class, () -> ValidacionDatos.marcaModelo(v, "marca")); }
+    void marcasYModelosSinSentido(String v) { assertThrows(IllegalArgumentException.class, () -> ValidacionDatos.marcaModelo(v, "La marca")); }
+
+    @Test
+    void elMensajeDelModeloUsaElArticuloCorrecto() {
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> ValidacionDatos.marcaModelo("123", "El modelo"));
+        assertTrue(ex.getMessage().startsWith("El modelo debe tener letras"), ex.getMessage());
+    }
 
     @Test
     void colores() {

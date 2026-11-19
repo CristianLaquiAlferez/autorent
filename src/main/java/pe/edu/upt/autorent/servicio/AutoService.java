@@ -52,8 +52,8 @@ public class AutoService implements AutoUseCase {
         String placa = auto.placa() == null ? "" : auto.placa().trim().toUpperCase();
         if (placa.isBlank() || auto.marca() == null || auto.marca().isBlank() || auto.modelo() == null || auto.modelo().isBlank())
             throw new IllegalArgumentException("Placa, marca y modelo son obligatorios.");
-        ValidacionDatos.marcaModelo(auto.marca(), "marca");
-        ValidacionDatos.marcaModelo(auto.modelo(), "modelo");
+        ValidacionDatos.marcaModelo(auto.marca(), "La marca");
+        ValidacionDatos.marcaModelo(auto.modelo(), "El modelo");
         ValidacionDatos.colorOpcional(auto.color());
         if (auto.categoria() == null || auto.categoria().isBlank())
             throw new IllegalArgumentException("Seleccione la categoría del vehículo.");

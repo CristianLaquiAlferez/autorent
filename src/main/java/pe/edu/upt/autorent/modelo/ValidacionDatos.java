@@ -77,11 +77,11 @@ public final class ValidacionDatos {
             throw new IllegalArgumentException("El teléfono debe ser un celular de 9 dígitos que empiece con 9, o un fijo de 6 o 7 dígitos, sin +51.");
     }
 
-    /** Marca o modelo del vehículo. */
+    /** Marca o modelo del vehículo; campo = "La marca" o "El modelo" (va al inicio del mensaje). */
     public static void marcaModelo(String valor, String campo) {
         String v = valor == null ? "" : valor.trim();
         if (v.isEmpty() || v.length() > 60 || !MARCA_MODELO.matcher(v).matches())
-            throw new IllegalArgumentException("La " + campo + " debe tener letras (puede llevar números, espacio, punto o guion) y como máximo 60 caracteres.");
+            throw new IllegalArgumentException(campo + " debe tener letras (puede llevar números, espacio, punto o guion) y como máximo 60 caracteres.");
     }
 
     /** Color del vehículo (opcional): solo letras. */
