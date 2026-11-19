@@ -78,7 +78,8 @@ class SeguridadWebTest {
         mvc.perform(post("/operaciones/pagos/1/confirmar").with(user("trabajador").roles("TRABAJADOR"))).andExpect(status().isForbidden());
         mvc.perform(post("/reservas/1/cancelar").with(user("cliente").roles("CLIENTE"))).andExpect(status().isForbidden());
         mvc.perform(post("/pagos/1/tarjeta").with(user("cliente").roles("CLIENTE"))).andExpect(status().isForbidden());
-        mvc.perform(post("/registro").param("username", "x")).andExpect(status().isForbidden());
+        // Sin sesión, un formulario público vencido no se acepta: vuelve al formulario con el aviso "la página expiró".
+        mvc.perform(post("/registro").param("username", "x")).andExpect(redirectedUrl("/registro?expirada"));
     }
 
     @Test

@@ -38,16 +38,17 @@ public class PagoEnLineaService implements PagoEnLineaUseCase {
     private final UsuarioRepositoryPort usuarios;
     private final DevolucionRepositoryPort devoluciones;
     private final PasarelaTarjetaPort tarjetas;
+    private final PasarelaYapePort yape;
     private final PayPalPort payPal;
     private final ReservaService reglasDeReserva;
     private final BitacoraReservas bitacora;
     private final Clock reloj;
 
     public PagoEnLineaService(PagoRepositoryPort pagos, ReservaRepositoryPort reservas, UsuarioRepositoryPort usuarios,
-                              DevolucionRepositoryPort devoluciones, PasarelaTarjetaPort tarjetas, PayPalPort payPal,
+                              DevolucionRepositoryPort devoluciones, PasarelaTarjetaPort tarjetas, PasarelaYapePort yape, PayPalPort payPal,
                               ReservaService reglasDeReserva, BitacoraReservas bitacora, Clock reloj) {
         this.pagos = pagos; this.reservas = reservas; this.usuarios = usuarios; this.devoluciones = devoluciones;
-        this.tarjetas = tarjetas; this.payPal = payPal; this.reglasDeReserva = reglasDeReserva; this.bitacora = bitacora; this.reloj = reloj;
+        this.tarjetas = tarjetas; this.yape = yape; this.payPal = payPal; this.reglasDeReserva = reglasDeReserva; this.bitacora = bitacora; this.reloj = reloj;
     }
 
     @Override @Transactional(readOnly = true) public boolean payPalDisponible() { return payPal.configurado(); }
@@ -58,7 +59,7 @@ public class PagoEnLineaService implements PagoEnLineaUseCase {
         Reserva r = reservas.findById(pago.reservaId()).orElseThrow(() -> new IllegalArgumentException("Reserva no encontrada."));
         boolean conPayPal = payPal.configurado();
         return new DatosCheckout(pago, r, conPayPal, conPayPal ? payPal.clientId() : null, payPal.moneda(),
-                conPayPal ? payPal.convertir(pago.monto()) : null, tarjetas.nombre());
+                conPayPal ? payPal.convertir(pago.monto()) : null, tarjetas.nombre(), yape.nombre());
     }
 
     /** Crea un pago de saldo PENDIENTE por todo lo que falta. El cliente elige tarjeta o PayPal en la pantalla de pago. */
@@ -95,6 +96,22 @@ public class PagoEnLineaService implements PagoEnLineaUseCase {
             return cobro;
         }
         Pago conDatos = pago.conDatosPasarela(MetodoPago.TARJETA, cobro.codigoTransaccion(), cobro.detalle());
+        reglasDeReserva.aplicarPagoConfirmado(r, conDatos, username);
+        return cobro;
+    }
+
+    @Override public ResultadoCobro pagarConYape(String username, Long pagoId, String celular, String codigoAprobacion) {
+        Pago pago = pagoPendienteDelCliente(username, pagoId);
+        Reserva r = reservas.findByIdForUpdate(pago.reservaId()).orElseThrow(() -> new IllegalArgumentException("Reserva no encontrada."));
+        pago = pagos.findById(pagoId).orElseThrow();            // relectura después del bloqueo (evita doble cobro)
+        if (pago.estado() != EstadoPago.PENDIENTE) throw new IllegalArgumentException("Este pago ya fue procesado.");
+        reglasDeReserva.verificarPagoAplicable(r, pago);
+        ResultadoCobro cobro = yape.cobrar(celular, codigoAprobacion, pago.monto(), descripcion(r, pago));
+        if (!cobro.aprobado()) {
+            bitacora.anotar(r.id(), AccionReserva.PAGO_EN_LINEA_FALLIDO, username, "Yape: " + cobro.mensaje());
+            return cobro;
+        }
+        Pago conDatos = pago.conDatosPasarela(MetodoPago.YAPE_EN_LINEA, cobro.codigoTransaccion(), cobro.detalle());
         reglasDeReserva.aplicarPagoConfirmado(r, conDatos, username);
         return cobro;
     }
@@ -145,9 +162,11 @@ public class PagoEnLineaService implements PagoEnLineaUseCase {
         Devolucion d = devoluciones.findById(devolucionId).orElseThrow(() -> new IllegalArgumentException("Devolución no encontrada."));
         if (d.estado() != EstadoDevolucion.PENDIENTE || !d.metodo().esEnLinea()) return;
         Pago pago = pagos.findById(d.pagoId()).orElseThrow(() -> new IllegalArgumentException("Pago no encontrado."));
-        ResultadoReembolso r = d.metodo() == MetodoPago.PAYPAL
-                ? payPal.reembolsar(pago.codigoOperacion(), d.monto())
-                : tarjetas.reembolsar(pago.codigoOperacion(), d.monto());
+        ResultadoReembolso r = switch (d.metodo()) {
+            case PAYPAL -> payPal.reembolsar(pago.codigoOperacion(), d.monto());
+            case YAPE_EN_LINEA -> yape.reembolsar(pago.codigoOperacion(), d.monto());
+            default -> tarjetas.reembolsar(pago.codigoOperacion(), d.monto());
+        };
         if (!r.exitoso()) {
             log.warn("Reembolso automático no realizado para la devolución {}: {}", d.id(), r.mensaje());
             return;

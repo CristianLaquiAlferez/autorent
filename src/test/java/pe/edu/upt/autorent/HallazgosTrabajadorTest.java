@@ -86,6 +86,16 @@ class HallazgosTrabajadorTest {
     }
 
     @Test
+    void unaPaginaDeIngresoVencidaVuelveAlIngresoConAviso() throws Exception {
+        // Sin código CSRF y sin sesión (la página quedó abierta o el servidor se reinició): no es "Acceso denegado".
+        mvc.perform(post("/login").param("username", "admin").param("password", "x"))
+                .andExpect(redirectedUrl("/login?expirada"));
+        // Con sesión activa, un envío sin código CSRF sigue siendo rechazado con 403.
+        mvc.perform(post("/reservas/1/cancelar").with(user("cliente").roles("CLIENTE")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void unFormularioEnviadoAUnaRutaDeOtroRolMuestraAccesoDenegado() throws Exception {
         mvc.perform(post("/admin/autos/1/estado").param("estado", "INACTIVO").with(csrf()).with(user("trabajador").roles("TRABAJADOR")))
                 .andExpect(status().isForbidden())

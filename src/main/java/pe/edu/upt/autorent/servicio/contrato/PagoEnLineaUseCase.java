@@ -11,7 +11,7 @@ import pe.edu.upt.autorent.modelo.ResultadoCobro;
 public interface PagoEnLineaUseCase {
     /** Datos que necesita la pantalla de pago. */
     record DatosCheckout(Pago pago, Reserva reserva, boolean payPalDisponible, String payPalClientId,
-                         String payPalMoneda, BigDecimal montoPayPal, String nombrePasarelaTarjeta) { }
+                         String payPalMoneda, BigDecimal montoPayPal, String nombrePasarelaTarjeta, String nombrePasarelaYape) { }
 
     /** ¿Está configurado PayPal Sandbox? (si no, solo se ofrece la pasarela de tarjeta de prueba). */
     boolean payPalDisponible();
@@ -22,6 +22,8 @@ public interface PagoEnLineaUseCase {
     /** Cobra con tarjeta en la pasarela; si se aprueba, confirma el pago y la reserva. */
     ResultadoCobro pagarConTarjeta(String username, Long pagoId, DatosTarjeta tarjeta);
     /** Crea la orden en PayPal para que el cliente la apruebe en la ventana de PayPal. */
+    /** Cobro con Yape: celular y código de aprobación de 6 dígitos que el cliente ve en su app. */
+    ResultadoCobro pagarConYape(String username, Long pagoId, String celular, String codigoAprobacion);
     OrdenEnLinea crearOrdenPayPal(String username, Long pagoId);
     /** Cobra la orden aprobada en PayPal y confirma el pago. */
     ResultadoCobro capturarPayPal(String username, Long pagoId, String ordenId);

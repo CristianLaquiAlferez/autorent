@@ -48,7 +48,7 @@
 </select>
 </label>
             <div class="notice full solo-en-linea" hidden>
-<strong>Pago en línea:</strong> al enviar la solicitud pasará a la pantalla de pago (tarjeta Visa/Mastercard o PayPal).
+<strong>Pago en línea:</strong> al enviar la solicitud pasará a la pantalla de pago (Yape con código de aprobación, tarjeta Visa/Mastercard o PayPal).
 La reserva se confirma en cuanto el pago sea aprobado y recibirá su boleta electrónica. Si no paga en 30 minutos, el pago se anula.
 </div>
             <div class="notice full solo-yape">
@@ -109,7 +109,7 @@ La reserva se confirma en cuanto el pago sea aprobado y recibirá su boleta elec
  const metodo=document.getElementById('metodoPago');
  function mostrarCampos(){
    const m=metodo?metodo.value:'';
-   const enLinea=(m==='TARJETA'||m==='PAYPAL');
+   const enLinea=(m==='TARJETA'||m==='PAYPAL'||m==='YAPE_EN_LINEA');
    document.querySelectorAll('.solo-yape').forEach(e=>e.hidden=(m!=='YAPE'));
    document.querySelectorAll('.solo-efectivo').forEach(e=>e.hidden=(m!=='EFECTIVO'));
    document.querySelectorAll('.solo-en-linea').forEach(e=>e.hidden=!enLinea);

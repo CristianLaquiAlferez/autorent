@@ -9,6 +9,7 @@
 <meta name="_csrf_header" th:content="${_csrf.headerName}">
 <title>Pagar reserva | AutoRent</title>
 <link rel="stylesheet" th:href="@{/css/app.css}">
+<script th:src="@{/js/telefono-peru.js}" defer></script>
 </head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}">
@@ -29,6 +30,30 @@
     </section>
 
     <div class="pago-opciones">
+        <section class="pago-opcion">
+            <h2>Yape</h2>
+            <p class="muted" th:text="${checkout.nombrePasarelaYape}">Pasarela de prueba</p>
+            <p class="muted"><small>En su app de Yape abra el menú, elija <strong>Código de aprobación</strong> y escriba aquí los 6 dígitos
+                (el código cambia cada pocos minutos). No necesita enviar captura ni esperar a la sucursal: el pago se confirma al instante.</small></p>
+            <form th:action="@{/pagos/{id}/yape(id=${p.id})}" method="post" class="form-grid" autocomplete="off">
+                <label>Celular de Yape *<input name="celular" type="tel" inputmode="numeric" maxlength="9" minlength="9" pattern="9[0-9]{8}"
+                       data-telefono-peru="movil" placeholder="999999999" title="9 dígitos, empieza con 9 (sin +51)" required></label>
+                <label>Código de aprobación *<input name="codigoAprobacion" inputmode="numeric" maxlength="6" minlength="6" pattern="[0-9]{6}"
+                       placeholder="123456" title="6 dígitos que aparecen en su app de Yape" required></label>
+                <div class="full actions">
+                    <button class="btn primary" type="submit" th:text="|Yapear S/ ${#numbers.formatDecimal(p.monto,1,2)}|">Yapear</button>
+                </div>
+            </form>
+            <details class="tarjetas-prueba">
+                <summary>Códigos de prueba</summary>
+                <table>
+                    <tr><td>Cualquier código de 6 dígitos</td><td>Aprobado</td></tr>
+                    <tr><td>000000</td><td>Código incorrecto o vencido</td></tr>
+                    <tr><td>111111</td><td>Saldo insuficiente en Yape</td></tr>
+                </table>
+            </details>
+        </section>
+
         <section class="pago-opcion" th:if="${checkout.payPalDisponible}">
             <h2>PayPal</h2>
             <p class="muted">Pague con su cuenta PayPal o con tarjeta de débito/crédito dentro de PayPal.

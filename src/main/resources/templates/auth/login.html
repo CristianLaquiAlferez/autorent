@@ -18,6 +18,7 @@
         
         <div class="alert danger" th:if="${param.error}">Usuario o contraseña incorrectos, o cuenta desactivada.</div>
         <div class="alert success" th:if="${param.logout}">Sesión cerrada correctamente.</div>
+        <div class="alert danger" th:if="${param.expirada}">La página estuvo abierta mucho tiempo y expiró por seguridad. Vuelva a ingresar.</div>
         <div class="alert success" th:if="${param.registered}">Cuenta registrada. Inicia sesión.</div>
         <form th:action="@{/login}" method="post" class="form-grid single">
             <label>Usuario<input type="text" name="username" required autofocus>

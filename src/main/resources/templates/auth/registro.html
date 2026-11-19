@@ -17,6 +17,7 @@
 </div>
     <section class="panel">
         <h1>Crear cuenta de cliente</h1>
+        <div class="alert danger" th:if="${param.expirada}">La página estuvo abierta mucho tiempo y expiró por seguridad. Vuelva a llenar el formulario.</div>
         
         <form th:action="@{/registro}" th:object="${form}" method="post" class="form-grid">
             <label>Usuario *<input th:field="*{username}" required minlength="4" maxlength="60" pattern="[A-Za-z0-9._\-]{4,60}" autocapitalize="none" title="De 4 a 60 letras, números, punto, guion o guion bajo (sin espacios)">

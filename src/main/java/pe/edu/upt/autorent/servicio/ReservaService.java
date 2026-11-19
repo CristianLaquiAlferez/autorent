@@ -628,6 +628,8 @@ public class ReservaService implements ReservaUseCase {
      * o "Cuenta PayPal". El correo del pagador queda en el detalle del pago.
      */
     static String destinoEnLinea(Pago p) {
+        // Yape con código de aprobación: se devuelve al mismo Yape (el detalle ya trae el celular enmascarado).
+        if (p.metodo() == MetodoPago.YAPE_EN_LINEA) return p.detalle() != null && p.detalle().startsWith("Yape") ? p.detalle() : "Yape del pago";
         java.util.regex.Matcher ultimos = java.util.regex.Pattern.compile("\\*{4} ?(\\d{4})")
                 .matcher(p.detalle() == null ? "" : p.detalle());
         if (ultimos.find()) return "Tarjeta **** " + ultimos.group(1);

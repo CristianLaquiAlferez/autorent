@@ -151,6 +151,30 @@ class FlujosDeNegocioTest {
     }
 
     @Test
+    void yapeConCodigoDeAprobacionSeConfirmaSoloYSeDevuelveSolo() {
+        Usuario c = nuevoCliente(); Auto a = nuevoAuto();
+        Reserva r = reservas.crearReservaOnline(c.username(), a.id(), hoy().plusDays(10), hoy().plusDays(12),
+                new BigDecimal("60.00"), MetodoPago.YAPE_EN_LINEA, null, null, null);
+        Pago p = pagoPendiente(r, c.username());
+        // Códigos de prueba: incorrecto o sin saldo se rechazan y el pago sigue pendiente.
+        assertFalse(pagosEnLinea.pagarConYape(c.username(), p.id(), "951234567", "000000").aprobado());
+        assertFalse(pagosEnLinea.pagarConYape(c.username(), p.id(), "951234567", "111111").aprobado());
+        assertFalse(pagosEnLinea.pagarConYape(c.username(), p.id(), "12345", "123456").aprobado());
+        assertFalse(pagosEnLinea.pagarConYape(c.username(), p.id(), "951234567", "12ab56").aprobado());
+        ResultadoCobro ok = pagosEnLinea.pagarConYape(c.username(), p.id(), "951234567", "482915");
+        assertTrue(ok.aprobado());
+        assertEquals(EstadoReserva.CONFIRMADA, reservas.obtenerReserva(r.id()).estado());
+        assertThrows(IllegalArgumentException.class, () -> pagosEnLinea.pagarConYape(c.username(), p.id(), "951234567", "482915"));
+        assertTrue(comprobantes.listarDeCliente(c.username()).stream().anyMatch(x -> x.tipo() == TipoComprobante.BOLETA));
+        // Al cancelar, la pasarela devuelve el dinero al mismo Yape sin que intervenga la sucursal.
+        reservas.cancelarReserva(r.id(), c.username(), null);
+        Devolucion d = devoluciones.findByReservaId(r.id()).get(0);
+        assertEquals(EstadoDevolucion.COMPLETADA, d.estado());
+        assertTrue(d.codigoOperacion().startsWith("YSIMR-"));
+        assertEquals("Yape *****4567", d.telefonoDestino());
+    }
+
+    @Test
     void pagoSaldoEnLineaYPresencialEmitenSusBoletas() {
         Usuario c = nuevoCliente(); Auto a = nuevoAuto();
         Reserva r = reservas.crearReservaPresencial(c.id(), a.id(), hoy().plusDays(3), hoy().plusDays(5),

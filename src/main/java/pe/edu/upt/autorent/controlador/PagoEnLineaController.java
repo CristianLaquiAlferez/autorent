@@ -55,6 +55,25 @@ public class PagoEnLineaController {
         }
     }
 
+    /** Cobro con Yape (celular + código de aprobación). Si se rechaza, vuelve a la pantalla de pago con el motivo. */
+    @PostMapping("/{id}/yape")
+    public String yape(@PathVariable Long id, @RequestParam(required = false) String celular,
+                       @RequestParam(required = false) String codigoAprobacion, Authentication auth, RedirectAttributes flash) {
+        try {
+            ResultadoCobro r = pagos.pagarConYape(auth.getName(), id, celular, codigoAprobacion);
+            if (!r.aprobado()) {
+                flash.addFlashAttribute("error", "Pago rechazado: " + r.mensaje());
+                return "redirect:/pagos/" + id + "/pagar";
+            }
+            flash.addFlashAttribute("ok", "Pago aprobado con " + r.detalle() + " (operación " + r.codigoTransaccion()
+                    + "). Su boleta electrónica está en \"Mis comprobantes\".");
+            return "redirect:/mis-reservas";
+        } catch (IllegalArgumentException ex) {
+            flash.addFlashAttribute("error", ex.getMessage());
+            return "redirect:/mis-reservas";
+        }
+    }
+
     /** Paso 1 de PayPal: crear la orden. El botón de PayPal recibe el id y abre la ventana de aprobación. */
     @PostMapping("/{id}/paypal/orden")
     @ResponseBody

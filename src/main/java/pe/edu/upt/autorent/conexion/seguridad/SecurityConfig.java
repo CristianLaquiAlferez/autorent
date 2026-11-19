@@ -1,5 +1,11 @@
 package pe.edu.upt.autorent.conexion.seguridad;
 
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.access.AccessDeniedHandlerImpl;
+import org.springframework.security.web.csrf.CsrfException;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -37,7 +43,31 @@ public class SecurityConfig {
                 .anyRequest().authenticated())
             .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/inicio", true).permitAll())
             .logout(logout -> logout.logoutSuccessUrl("/login?logout").permitAll())
-            .exceptionHandling(ex -> ex.accessDeniedPage("/acceso-denegado"));
+            .exceptionHandling(ex -> ex.accessDeniedHandler(manejadorAccesoDenegado()));
         return http.build();
+    }
+
+    /**
+     * Acceso denegado:
+     * - Si falla el código CSRF de alguien sin sesión (la página de ingreso quedó abierta mucho tiempo o el
+     *   servidor se reinició), no es un ataque: se le devuelve al ingreso con el aviso "la página expiró".
+     * - En cualquier otro caso (ruta de otro rol, o un envío sin código CSRF con sesión activa) se muestra
+     *   la página "Acceso denegado" con estado 403.
+     */
+    private AccessDeniedHandler manejadorAccesoDenegado() {
+        AccessDeniedHandlerImpl paginaDenegado = new AccessDeniedHandlerImpl();
+        paginaDenegado.setErrorPage("/acceso-denegado");
+        return (request, response, ex) -> {
+            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+            boolean sinSesion = auth == null || auth instanceof AnonymousAuthenticationToken || !auth.isAuthenticated();
+            if (ex instanceof CsrfException && sinSesion) {
+                // Vuelve al mismo formulario público (registro) o al ingreso, sin guardar nada de lo enviado.
+                String ruta = request.getRequestURI().substring(request.getContextPath().length());
+                String destino = "/registro".equals(ruta) ? "/registro?expirada" : "/login?expirada";
+                response.sendRedirect(request.getContextPath() + destino);
+                return;
+            }
+            paginaDenegado.handle(request, response, ex);
+        };
     }
 }
