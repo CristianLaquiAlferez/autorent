@@ -47,6 +47,14 @@ class PasarelaTarjetaSimuladaAdapterTest {
         assertTrue(cobrar("4111111111111111", "11/26", "123").aprobado());                              // vence este mes: válida
     }
 
+    @Test void elTitularSoloAdmiteLetras() {
+        assertTrue(pasarela.cobrar(new DatosTarjeta("4111111111111111", "María López", "12/28", "123"), MONTO, "Prueba").aprobado());
+        for (String malo : new String[]{"Luis123", "<b>Luis</b>", "12345", "Luis  Apaza", "  "}) {
+            ResultadoCobro r = pasarela.cobrar(new DatosTarjeta("4111111111111111", malo, "12/28", "123"), MONTO, "Prueba");
+            assertFalse(r.aprobado(), malo);
+        }
+    }
+
     @Test void elNumeroCompletoNoApareceEnTextos() {
         DatosTarjeta t = new DatosTarjeta("4111111111111111", "Luis", "12/28", "123");
         assertFalse(t.toString().contains("411111111111"));

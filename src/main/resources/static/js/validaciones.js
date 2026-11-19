@@ -9,6 +9,9 @@
  * - Fechas enlazadas: un campo con data-despues-de="idDelInicio" ajusta su mínimo y máximo según
  *   la fecha de inicio (data-dias-min, data-dias-max). Ej.: devolución entre 1 y 30 días después del recojo.
  * - Números: muestra el aviso de mínimo/máximo al salir del campo, no recién al enviar.
+ * - Filtros al escribir: los campos numéricos (DNI, CVV, tarjeta) solo aceptan dígitos; el número de
+ *   tarjeta se agrupa de 4 en 4 (data-agrupar); el vencimiento se escribe MM/AA (data-formato="mmaa");
+ *   nombres, apellidos y titular solo aceptan letras, espacio, apóstrofo y guion.
  */
 (function () {
     const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto',
@@ -64,7 +67,42 @@
         actualizar();
     }
 
+
+    /** Reemplaza el valor del campo sin mover el cursor al final cuando no hace falta. */
+    function aplicar(campo, nuevo) {
+        if (campo.value === nuevo) return;
+        const desdeElFinal = campo.value.length - (campo.selectionStart ?? campo.value.length);
+        campo.value = nuevo;
+        const pos = Math.max(0, nuevo.length - desdeElFinal);
+        try { campo.setSelectionRange(pos, pos); } catch (e) { /* algunos tipos no admiten cursor */ }
+    }
+
+    function filtrarDigitos(campo) {
+        let digitos = campo.value.replace(/[^0-9]/g, '');
+        const grupo = Number(campo.dataset.agrupar || 0);
+        if (grupo > 0) digitos = digitos.match(new RegExp('.{1,' + grupo + '}', 'g'))?.join(' ') || '';
+        aplicar(campo, digitos);
+    }
+
+    function filtrarMesAnio(campo) {
+        const d = campo.value.replace(/[^0-9]/g, '').slice(0, 4);
+        aplicar(campo, d.length > 2 ? d.slice(0, 2) + '/' + d.slice(2) : d);
+    }
+
+    function filtrarLetras(campo) {
+        aplicar(campo, campo.value.replace(/[^A-Za-zÁÉÍÓÚÜÑáéíóúüñ '\-]/g, '').replace(/ {2,}/g, ' '));
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('input[inputmode="numeric"]:not([data-telefono-peru]):not([data-formato])').forEach(campo => {
+            campo.addEventListener('input', () => filtrarDigitos(campo));
+        });
+        document.querySelectorAll('input[data-formato="mmaa"]').forEach(campo => {
+            campo.addEventListener('input', () => filtrarMesAnio(campo));
+        });
+        document.querySelectorAll('input[data-solo="letras"], input[name="nombres"], input[name="apellidos"], input[name="titular"]').forEach(campo => {
+            campo.addEventListener('input', () => filtrarLetras(campo));
+        });
         document.querySelectorAll('input[data-despues-de]').forEach(enlazarFechas);
         document.querySelectorAll('input[type="date"]').forEach(campo => {
             campo.addEventListener('change', () => revisarFecha(campo, true));

@@ -52,6 +52,8 @@ public class PasarelaTarjetaSimuladaAdapter implements PasarelaTarjetaPort {
         if (marca == null) return ResultadoCobro.rechazado("Solo se aceptan tarjetas Visa y Mastercard.");
         if (tarjeta.titular() == null || tarjeta.titular().trim().length() < 3)
             return ResultadoCobro.rechazado("Escriba el nombre del titular como figura en la tarjeta.");
+        if (!tarjeta.titular().trim().matches("[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+([ '\\-][A-Za-zÁÉÍÓÚÜÑáéíóúüñ]+)*") || tarjeta.titular().trim().length() > 60)
+            return ResultadoCobro.rechazado("El nombre del titular solo admite letras, como figura en la tarjeta.");
         String errorVencimiento = validarVencimiento(tarjeta.vencimiento());
         if (errorVencimiento != null) return ResultadoCobro.rechazado(errorVencimiento);
         if (tarjeta.cvv() == null || !tarjeta.cvv().matches("\\d{3}")) return ResultadoCobro.rechazado("El CVV debe tener 3 dígitos.");
